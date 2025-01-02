@@ -2,49 +2,61 @@ package ordersheets
 
 import (
 	"fmt"
+	"html/template"
 	"os"
 )
 
 func GenerateOrderSheets(orders []Order) {
-
-	html := []string{}
-
 	css, err := os.ReadFile("assets/css/style.css")
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
-	html = append(html, fmt.Sprintf("<html><head><style type='text/css'>%s</style></head>\n<body>\n", css))
-
-	for _, order := range orders {
-
-		html = append(html, "<table class='contactinfo'>\n")
-		html = append(html, fmt.Sprintf("<tr><td>Order# %d</td><td>Customer: %s</td></tr>\n", order.OrderNumber, order.Name))
-		html = append(html, fmt.Sprintf("<tr><td>Email: %s</td><td>Phone: %s</td></tr>\n", order.Email, order.PhoneNumber))
-		html = append(html, "</table><br/>\n")
-
-		html = append(html, "<table class='plants'>\n")
-		html = append(html, "<tr><th>Plant</th><th>Quantity</th></tr>")
-		for _, plant := range order.OrderedPlants {
-			html = append(html, fmt.Sprintf("<tr><td>%s</td><td>%d</td></tr>\n", plant.PlantType, plant.Quantity))
-		}
-		html = append(html, "</table>\n<br/>\n")
-
-		html = append(html, "<div class='pagebreak'> </div>\n")
+	tmpl, err := template.New("orderSheet").Parse(`
+		<html>
+		<head>
+			<style type='text/css'>{{.CSS}}</style>
+		</head>
+		<body>
+			{{range .Orders}}
+			<table class='contactinfo'>
+				<tr><td>Order# {{.OrderNumber}}</td><td>Customer: {{.Name}}</td></tr>
+				<tr><td>Email: {{.Email}}</td><td>Phone: {{.PhoneNumber}}</td></tr>
+			</table>
+			<br/>
+			<table class='plants'>
+				<tr><th>Plant</th><th>Quantity</th></tr>
+				{{range .OrderedPlants}}
+				<tr><td>{{.PlantType}}</td><td>{{.Quantity}}</td></tr>
+				{{end}}
+			</table>
+			<div class='pagebreak'></div>
+			{{end}}
+		</body>
+		</html>
+	`)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
-	html = append(html, "</body>\n</html>\n")
+	data := struct {
+		CSS    template.CSS
+		Orders []Order
+	}{
+		CSS:    template.CSS(string(css)),
+		Orders: orders,
+	}
 
-	file, err := os.Create("FlowerFundraiserOrderSheets.html")
+	file, err := os.Create("work/FlowerFundraiserOrderSheets.html")
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close() // Ensure the file is closed
 
-	for _, line := range html {
-		_, err = file.WriteString(line)
-		if err != nil {
-			panic(err)
-		}
+	err = tmpl.Execute(file, data)
+	if err != nil {
+		fmt.Println(err)
 	}
 }
