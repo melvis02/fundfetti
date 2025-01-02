@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -36,9 +35,9 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 
 		data := ordersheets.ReadTSV(buf.Bytes())
 		orders := ordersheets.FormatOrderSheet(data)
-		fmt.Fprintf(w, "File uploaded successfully")
 
 		ordersheets.GenerateOrderSheets(orders)
+		ordersheets.GenerateSummarySheet(orders)
 		return
 	}
 }
@@ -54,11 +53,10 @@ func postContentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data := ordersheets.ReadTSV(body)
-		orders := ordersheets.FormatOrderSheet(data)
+		orders := ordersheets.FormatOrderSheet(data[3:])
 
-		for _, order := range orders {
-			fmt.Println(order)
-		}
+		ordersheets.GenerateOrderSheets(orders)
+		ordersheets.GenerateSummarySheet(orders)
 		return
 	}
 }
