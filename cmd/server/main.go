@@ -2,21 +2,69 @@ package server
 
 import (
 	"bytes"
+	"fmt"
+	"html/template"
 	"io"
+	"log"
 	"net/http"
+	"os"
+	"time"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 
 	"github.com/melvis02/label-generator/internal/ordersheets"
 )
 
 func StartServer() {
-	http.HandleFunc("/upload", uploadFileHandler)
-	http.HandleFunc("/post", postContentHandler)
-	http.ListenAndServe(":8080", nil)
+
+	router := mux.NewRouter()
+
+	router.PathPrefix("/public/").Handler(http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
+	router.HandleFunc("/upload", upload).Methods("GET", "POST")
+	router.HandleFunc("/post", post).Methods("POST")
+	router.HandleFunc("/", index).Methods("GET")
+
+	port, ok := os.LookupEnv("PORT")
+	if !ok {
+		port = "8080"
+	}
+
+	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
+
+	addr := fmt.Sprintf(":%s", port)
+	server := http.Server{
+		Addr:         addr,
+		Handler:      loggedRouter,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  15 * time.Second,
+	}
+	log.Println("[cmd/server/main] Running web server on port", port)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("[cmd/server/main] couldn't start web server: %v\n", err)
+	}
 }
 
-func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
+var templates = template.Must(template.ParseFiles("./templates/base.html", "./templates/body.html"))
+
+// index is the handler responsible for rending the index page for the site.
+func index(w http.ResponseWriter, r *http.Request) {
+	b := struct {
+		Title template.HTML
+	}{
+		Title: template.HTML("Huegel Flower Fundraiser"),
+	}
+	err := templates.ExecuteTemplate(w, "base", &b)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func upload(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		http.ServeFile(w, r, "upload.html")
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -36,13 +84,27 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 		data := ordersheets.ReadTSV(buf.Bytes())
 		orders := ordersheets.FormatOrderSheet(data)
 
-		ordersheets.GenerateOrderSheets(orders)
+		ordersheets.GenerateOrderSheets(orders, w)
 		ordersheets.GenerateSummarySheet(orders)
+
+		b := struct {
+			Title template.HTML
+		}{
+			Title: template.HTML("Huegel Flower Fundraiser"),
+		}
+		err = templates.ExecuteTemplate(w, "base", &b)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 		return
 	}
+	w.WriteHeader(http.StatusBadRequest)
 }
 
-func postContentHandler(w http.ResponseWriter, r *http.Request) {
+func post(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 
 		// Read the request body
@@ -55,8 +117,9 @@ func postContentHandler(w http.ResponseWriter, r *http.Request) {
 		data := ordersheets.ReadTSV(body)
 		orders := ordersheets.FormatOrderSheet(data[3:])
 
-		ordersheets.GenerateOrderSheets(orders)
+		//ordersheets.GenerateOrderSheets(orders)
 		ordersheets.GenerateSummarySheet(orders)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 }

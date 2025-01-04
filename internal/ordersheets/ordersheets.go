@@ -3,11 +3,12 @@ package ordersheets
 import (
 	"fmt"
 	"html/template"
+	"net/http"
 	"os"
 )
 
-func GenerateOrderSheets(orders []Order) {
-	css, err := os.ReadFile("assets/css/style.css")
+func GenerateOrderSheets(orders []Order, w http.ResponseWriter) {
+	css, err := os.ReadFile("public/assets/css/style.css")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -55,8 +56,10 @@ func GenerateOrderSheets(orders []Order) {
 	}
 	defer file.Close() // Ensure the file is closed
 
-	err = tmpl.Execute(file, data)
+	err = tmpl.ExecuteTemplate(w, "orderSheet", &data)
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	return
 }

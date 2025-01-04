@@ -1,0 +1,15 @@
+{{define "body"}}
+    <header class="header">
+        <img class="logo" src="/public/assets/images/logo.png" alt="Huegel Flower Fundraiser" width="50" height="50">
+    </header>
+    <main>
+        <article>
+            <section>
+                <form action="/upload" method="post" enctype="multipart/form-data">
+                    <input type="file" name="orders_spreadsheet">
+                    <input type="submit" value="Upload">
+                </form>
+            </section>
+        </article>
+    </main>
+{{end}}
