@@ -13,7 +13,10 @@
     </head>
     <body>
     {{template "body" .}}
-    {{template "orderSheet" .}}
+    {{if .Orders}}
+        {{template "orders_spreadsheet" .}}
+        {{template "summary_spreadsheet" .}}
+    {{end}}
     </body>
     </html>
 {{end}}
