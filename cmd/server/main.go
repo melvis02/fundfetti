@@ -68,7 +68,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "POST" {
-		file, _, err := r.FormFile("orders_spreadsheet")
+		file, _, err := r.FormFile("orders_sheets")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
