@@ -7,7 +7,7 @@ import (
 )
 
 func GenerateSummarySheet(orders []Order) {
-	css, err := os.ReadFile("assets/css/style.css")
+	css, err := os.ReadFile("public/assets/css/style.css")
 	if err != nil {
 		fmt.Println(err)
 		return
