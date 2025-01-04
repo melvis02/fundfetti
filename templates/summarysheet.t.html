@@ -1,0 +1,8 @@
+{{define "summary_spreadsheet"}}
+<table class='contactinfo'>
+    <tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Sorted?</th><th>Delivered?</th></tr>
+    {{range .Orders}}
+    <tr><td>{{.OrderNumber}}</td><td>{{.Name}}</td><td>{{.Email}}</td><td>{{.PhoneNumber}}</td><td></td><td></td></tr>
+    {{end}}
+</table>
+{{end}}

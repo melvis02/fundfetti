@@ -1,0 +1,16 @@
+{{define "orders_spreadsheet"}}
+    {{range .Orders}}
+    <table class='contactinfo'>
+        <tr><td>Order# {{.OrderNumber}}</td><td>Customer: {{.Name}}</td></tr>
+        <tr><td>Email: {{.Email}}</td><td>Phone: {{.PhoneNumber}}</td></tr>
+    </table>
+    <br/>
+    <table class='plants'>
+        <tr><th>Plant</th><th>Quantity</th></tr>
+        {{range .OrderedPlants}}
+        <tr><td>{{.PlantType}}</td><td>{{.Quantity}}</td></tr>
+        {{end}}
+    </table>
+    <div class='pagebreak'></div>
+    {{end}}
+{{end}}

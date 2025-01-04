@@ -21,9 +21,7 @@ func StartServer() {
 	router := mux.NewRouter()
 
 	router.PathPrefix("/public/").Handler(http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
-	router.HandleFunc("/upload", upload).Methods("GET", "POST")
-	router.HandleFunc("/post", post).Methods("POST")
-	router.HandleFunc("/", index).Methods("GET")
+	router.HandleFunc("/", index).Methods("GET", "POST")
 
 	port, ok := os.LookupEnv("PORT")
 	if !ok {
@@ -46,25 +44,26 @@ func StartServer() {
 	}
 }
 
-var templates = template.Must(template.ParseFiles("./templates/base.html", "./templates/body.html"))
+var templates = template.Must(template.ParseFiles("./templates/base.t.html", "./templates/body.t.html", "./templates/summarysheet.t.html", "./templates/ordersheets.t.html"))
 
 // index is the handler responsible for rending the index page for the site.
 func index(w http.ResponseWriter, r *http.Request) {
-	b := struct {
-		Title template.HTML
-	}{
-		Title: template.HTML("Huegel Flower Fundraiser"),
-	}
-	err := templates.ExecuteTemplate(w, "base", &b)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
-		return
-	}
-}
+	var orders []ordersheets.Order
 
-func upload(w http.ResponseWriter, r *http.Request) {
+	b := struct {
+		Title  template.HTML
+		Orders []ordersheets.Order
+	}{
+		Title:  template.HTML("Huegel Flower Fundraiser"),
+		Orders: orders,
+	}
+
 	if r.Method == "GET" {
-		w.WriteHeader(http.StatusOK)
+		err := templates.ExecuteTemplate(w, "base", &b)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -82,16 +81,8 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data := ordersheets.ReadTSV(buf.Bytes())
-		orders := ordersheets.FormatOrderSheet(data)
+		b.Orders = ordersheets.FormatOrderSheet(data)
 
-		ordersheets.GenerateOrderSheets(orders, w)
-		ordersheets.GenerateSummarySheet(orders)
-
-		b := struct {
-			Title template.HTML
-		}{
-			Title: template.HTML("Huegel Flower Fundraiser"),
-		}
 		err = templates.ExecuteTemplate(w, "base", &b)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
@@ -102,24 +93,4 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusBadRequest)
-}
-
-func post(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-
-		// Read the request body
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Error reading request body", http.StatusInternalServerError)
-			return
-		}
-
-		data := ordersheets.ReadTSV(body)
-		orders := ordersheets.FormatOrderSheet(data[3:])
-
-		//ordersheets.GenerateOrderSheets(orders)
-		ordersheets.GenerateSummarySheet(orders)
-		w.WriteHeader(http.StatusOK)
-		return
-	}
 }
