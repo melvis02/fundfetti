@@ -52,9 +52,9 @@ func FormatOrderSheet(records [][]string) []Order {
 	headers := records[0]
 
 	// Standardize a few columns
-	headers[findClosestMatch("Name", headers)] = "Name"
-	headers[findClosestMatch("Email Address", headers)] = "Email Address"
-	headers[findClosestMatch("Phone Number", headers)] = "Phone Number"
+	headers[findClosestMatchingColumnIndex("Name", headers)] = "Name"
+	headers[findClosestMatchingColumnIndex("Email Address", headers)] = "Email Address"
+	headers[findClosestMatchingColumnIndex("Phone Number", headers)] = "Phone Number"
 
 	columnsMap := make(map[string]ColumnMap)
 	for i, header := range headers {
@@ -104,7 +104,7 @@ func FormatOrderSheet(records [][]string) []Order {
 	return orders
 }
 
-func findClosestMatch(target string, headers []string) int {
+func findClosestMatchingColumnIndex(target string, headers []string) int {
 	minDistance := int(^uint(0) >> 1) // maximum int value
 	closestMatch := 0
 	for i, header := range headers {
