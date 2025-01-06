@@ -1,0 +1,38 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: flower-fundraiser-processing
+  labels:
+    app: flower-fundraiser-processing
+spec:
+  containers:
+    - name: flower-fundraiser-processing
+      image: 'melvis02/flower-fundraiser-processing:latest'
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: flower-fundraiser-processing
+spec:
+  selector:
+    app: flower-fundraiser-processing
+  ports:
+    - port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flower-fundraiser-processing
+spec:
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            path: /flowers
+            backend:
+              service:
+                name: flower-fundraiser-processing
+                port:
+                  number: 8080
+---
+
