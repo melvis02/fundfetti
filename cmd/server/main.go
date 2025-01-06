@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
-	"github.com/melvis02/label-generator/internal/ordersheets"
+	"github.com/melvis02/flower-fundraiser-processing/internal/ordersheets"
 )
 
 func StartServer() {
@@ -46,11 +46,10 @@ func StartServer() {
 
 var templates = template.Must(template.ParseFiles("./templates/base.t.html", "./templates/body.t.html", "./templates/summarysheet.t.html", "./templates/ordersheets.t.html"))
 
-// index is the handler responsible for rending the index page for the site.
 func index(w http.ResponseWriter, r *http.Request) {
 	var orders []ordersheets.Order
 
-	b := struct {
+	siteContent := struct {
 		Title  template.HTML
 		Orders []ordersheets.Order
 	}{
@@ -59,15 +58,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
-		err := templates.ExecuteTemplate(w, "base", &b)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
-			return
-		}
-		return
-	}
-
-	if r.Method == "POST" {
+		// do nothing
+	} else if r.Method == "POST" {
 		file, _, err := r.FormFile("orders_sheets")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -77,20 +69,19 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 		buf := bytes.NewBuffer(nil)
 		if _, err := io.Copy(buf, file); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		data := ordersheets.ReadTSV(buf.Bytes())
-		b.Orders = ordersheets.FormatOrderSheet(data)
+		siteContent.Orders = ordersheets.FormatOrderSheet(data)
+	} else {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
 
-		err = templates.ExecuteTemplate(w, "base", &b)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
+	err := templates.ExecuteTemplate(w, "base", &siteContent)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err.Error()), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusBadRequest)
 }

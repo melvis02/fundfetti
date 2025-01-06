@@ -1,40 +1,55 @@
+// FILE: cmd/server/main_test.go
 package server
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-func TestIndex(t *testing.T) {
-	req, err := http.NewRequest(http.MethodGet, "/", nil)
-	if err != nil {
-		t.Fatalf("TestIndex: couldn't create HTTP GET request: %v", err)
+func TestIndexHandler(t *testing.T) {
+	tests := []struct {
+		method         string
+		body           string
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			method:         "GET",
+			body:           "",
+			expectedStatus: http.StatusOK,
+			expectedBody:   "Huegel Flower Fundraiser",
+		},
+		{
+			method:         "POST",
+			body:           "orders_sheets=testdata",
+			expectedStatus: http.StatusOK,
+			expectedBody:   "Huegel Flower Fundraiser",
+		},
+		{
+			method:         "PUT",
+			body:           "",
+			expectedStatus: http.StatusMethodNotAllowed,
+			expectedBody:   "",
+		},
 	}
 
-	rec := httptest.NewRecorder()
+	for _, tt := range tests {
+		req := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.body))
+		req.Header.Set("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW")
 
-	index().ServeHTTP(rec, req)
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(index)
 
-	res := rec.Result()
-	defer func() {
-		err := res.Body.Close()
-		if err != nil {
-			t.Fatalf("TestIndex: couldn't close response body: %v", err)
+		handler.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != tt.expectedStatus {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
 		}
-	}()
 
-	if res.StatusCode != http.StatusOK {
-		t.Errorf("TestIndex: got status code %v, but want: %v", res.StatusCode, http.StatusOK)
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("TestIndex: could not read response body: %v", err)
-	}
-
-	if len(string(body)) == 0 {
-		t.Errorf("TestIndex: unexpected empty response body")
+		if !strings.Contains(rr.Body.String(), tt.expectedBody) {
+			t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), tt.expectedBody)
+		}
 	}
 }

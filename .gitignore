@@ -27,5 +27,6 @@ go.work.sum
 # VS Code debug binaries
 __debug_bin*
 
-# Working directory (input and output files)
+# Working directory (input and output files) and binaries
 work/
+bin/

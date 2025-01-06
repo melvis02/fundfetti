@@ -1,4 +1,4 @@
-module github.com/melvis02/label-generator
+module github.com/melvis02/flower-fundraiser-processing
 
 go 1.23.4
 
