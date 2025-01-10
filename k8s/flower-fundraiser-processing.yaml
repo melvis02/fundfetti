@@ -17,18 +17,24 @@ spec:
   selector:
     app: flower-fundraiser-processing
   ports:
-    - port: 8080
+    - name: flower-fundraiser-processing-port
+      port: 80
+      protocol: TCP
+      targetPort: 8080
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: flower-fundraiser-processing
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
     - http:
         paths:
-          - pathType: Prefix
-            path: /flowers
+          - pathType: ImplementationSpecific
+            path: /flowers(/|$)(.*)
             backend:
               service:
                 name: flower-fundraiser-processing
