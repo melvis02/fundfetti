@@ -1,13 +1,23 @@
-kind: Pod
-apiVersion: v1
+kind: Deployment
+apiVersion: apps/v1
 metadata:
   name: flower-fundraiser-processing
   labels:
     app: flower-fundraiser-processing
 spec:
-  containers:
-    - name: flower-fundraiser-processing
-      image: 'melvis02/flower-fundraiser-processing:latest'
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flower-fundraiser-processing
+  template:
+    metadata:
+      name: flower-fundraiser-processing
+      labels:
+        app: flower-fundraiser-processing
+    spec:
+      containers:
+        - name: flower-fundraiser-processing
+          image: 'melvis02/flower-fundraiser-processing:latest'
 ---
 kind: Service
 apiVersion: v1
@@ -39,6 +49,6 @@ spec:
               service:
                 name: flower-fundraiser-processing
                 port:
-                  number: 8080
+                  number: 80
 ---
 
