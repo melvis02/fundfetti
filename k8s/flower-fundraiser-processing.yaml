@@ -18,6 +18,13 @@ spec:
       containers:
         - name: flower-fundraiser-processing
           image: 'melvis02/flower-fundraiser-processing:latest'
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
 ---
 kind: Service
 apiVersion: v1
@@ -28,7 +35,7 @@ spec:
     app: flower-fundraiser-processing
   ports:
     - name: flower-fundraiser-processing-port
-      port: 80
+      port: 443
       protocol: TCP
       targetPort: 8080
 ---
@@ -37,18 +44,23 @@ kind: Ingress
 metadata:
   name: flower-fundraiser-processing
   annotations:
+    cert-manager.io/issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
-spec:
-  rules:
-    - http:
+  spec:
+    rules:
+    - host: flowers.treympick.me
+      http:
         paths:
-          - pathType: ImplementationSpecific
-            path: /flowers(/|$)(.*)
-            backend:
-              service:
-                name: flower-fundraiser-processing
-                port:
-                  number: 80
+        - backend:
+            service:
+              name: flower-fundraiser-processing
+              port:
+                number: 443
+          path: /(.*)
+          pathType: ImplementationSpecific
+    tls:
+    - hosts:
+      - flowers.treympick.me
 ---
 
