@@ -1,0 +1,136 @@
+{{define "title"}}Manage Orders{{end}}
+
+{{define "body"}}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-4 no-print">
+    <div>
+        <h1 class="mb-0">Flower Fundraiser Dashboard</h1>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/print/summary" target="_blank" class="btn btn-outline-primary">
+            🖨️ Print Summary
+        </a>
+        <a href="/print/orders" target="_blank" class="btn btn-outline-primary">
+            🖨️ Print Order Sheets
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4 no-print">
+    <div class="card-body">
+        <h5 class="card-title">Upload New Orders</h5>
+        <form action="/upload" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+            <input class="form-control" type="file" name="orders_sheets" required>
+            <button class="btn btn-primary" type="submit">Upload CSV</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title mb-3">All Orders</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Order #</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th class="text-center">Picked Up</th>
+                        <th class="text-center">Paid</th>
+                        <th>Items</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .AdminOrders}}
+                    <tr>
+                        <td>{{.ID}}</td>
+                        <td>{{.Name}}</td>
+                        <td>{{.Email}}</td>
+                        <td>{{.Phone}}</td>
+                        <td class="text-center">
+                            <input type="checkbox" class="form-check-input status-checkbox" data-id="{{.ID}}"
+                                data-type="picked_up" {{if .PickedUp}}checked{{end}}>
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" class="form-check-input status-checkbox" data-id="{{.ID}}"
+                                data-type="paid" {{if .Paid}}checked{{end}}>
+                        </td>
+                        <td>
+                            {{if .Items}}
+                            <ul class="list-unstyled mb-0 small text-muted">
+                                {{range .Items}}
+                                <li>{{.Quantity}}x {{.PlantType}}</li>
+                                {{end}}
+                            </ul>
+                            {{else}}
+                            <span class="text-muted">-</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <div class="mb-2">📦 No orders found</div>
+                            <small>Upload a CSV file to get started</small>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkboxes = document.querySelectorAll('.status-checkbox');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const id = this.dataset.id;
+                const pickedUp = row.querySelector('[data-type="picked_up"]').checked;
+                const paid = row.querySelector('[data-type="paid"]').checked;
+
+                // Disable inputs while saving
+                const inputs = row.querySelectorAll('input');
+                inputs.forEach(i => i.disabled = true);
+                row.style.opacity = '0.5';
+
+                fetch(`/api/orders/${id}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        picked_up: pickedUp,
+                        paid: paid
+                    })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Success feedback
+                        const inputs = row.querySelectorAll('input');
+                        inputs.forEach(i => i.disabled = false);
+                        row.style.opacity = '1';
+                        // Optional: show a small toast or flash
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to update status. Please try again.');
+                        this.checked = !this.checked; // Revert change
+                        const inputs = row.querySelectorAll('input');
+                        inputs.forEach(i => i.disabled = false);
+                        row.style.opacity = '1';
+                    });
+            });
+        });
+    });
+</script>
+{{end}}
