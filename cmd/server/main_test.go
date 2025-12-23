@@ -4,43 +4,43 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/melvis02/flower-fundraiser-processing/internal/db"
 )
 
-func TestIndexHandler(t *testing.T) {
+func TestDashboardHandler(t *testing.T) {
+	// Need to be in project root for templates
+	if err := os.Chdir("../../"); err != nil {
+		t.Fatalf("Failed to change dir: %v", err)
+	}
+
+	// Setup in-memory DB for testing
+	if err := db.InitDB(":memory:"); err != nil {
+		t.Fatalf("Failed to init db: %v", err)
+	}
+
+	initTemplates()
+
 	tests := []struct {
 		method         string
-		body           string
 		expectedStatus int
 		expectedBody   string
 	}{
 		{
 			method:         "GET",
-			body:           "",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "Huegel Flower Fundraiser",
-		},
-		{
-			method:         "POST",
-			body:           "orders_sheets=testdata",
-			expectedStatus: http.StatusOK,
-			expectedBody:   "Huegel Flower Fundraiser",
-		},
-		{
-			method:         "PUT",
-			body:           "",
-			expectedStatus: http.StatusMethodNotAllowed,
-			expectedBody:   "",
+			expectedBody:   "Manage Orders",
 		},
 	}
 
 	for _, tt := range tests {
-		req := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.body))
-		req.Header.Set("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW")
+		req := httptest.NewRequest(tt.method, "/", nil)
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(index)
+		handler := http.HandlerFunc(dashboardHandler)
 
 		handler.ServeHTTP(rr, req)
 

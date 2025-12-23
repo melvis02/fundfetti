@@ -31,3 +31,6 @@ __debug_bin*
 work/
 bin/
 tmp/
+
+# Dynamic data
+*.db
