@@ -23,6 +23,7 @@ type OrderedPlant struct {
 
 type Order struct {
 	OrderNumber   int
+	CampaignID    *int64 // Nullable
 	Name          string
 	LastName      string
 	Email         string
