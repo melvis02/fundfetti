@@ -135,6 +135,46 @@ export default function OrganizationDashboard() {
         setSelectedCampaign(campaign);
     };
 
+    const [editingCampaign, setEditingCampaign] = useState(null);
+
+    const handleUpdateCampaign = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                ...editingCampaign,
+                // ensure dates remain in correct format if touched (editingCampaign has state from input)
+                start_date: new Date(editingCampaign.start_date).toISOString(),
+                end_date: new Date(editingCampaign.end_date).toISOString(),
+            };
+            await api.updateCampaign(editingCampaign.id, payload);
+            setEditingCampaign(null);
+            fetchCampaigns();
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update campaign");
+        }
+    };
+
+    const handleDeleteCampaign = async (id) => {
+        if (!window.confirm("Are you sure? This will delete the campaign.")) return;
+        try {
+            await api.deleteCampaign(id);
+            fetchCampaigns();
+        } catch (e) {
+            console.error(e);
+            alert("Failed to delete campaign");
+        }
+    };
+
+    const openEditCampaign = (c) => {
+        // Format dates for input[type="date"] (YYYY-MM-DD)
+        setEditingCampaign({
+            ...c,
+            start_date: new Date(c.start_date).toISOString().split('T')[0],
+            end_date: new Date(c.end_date).toISOString().split('T')[0]
+        });
+    };
+
     if (loading) return <div className="p-8 text-center">Loading Organization...</div>;
     if (!org) return <div className="p-8 text-center text-red-600">Organization not found</div>;
 
@@ -206,7 +246,7 @@ export default function OrganizationDashboard() {
                         {/* Campaign List */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {campaigns.map(c => (
-                                <div key={c.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+                                <div key={c.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow relative group">
                                     <div className="flex justify-between items-start mb-4">
                                         <h4 className="text-lg font-semibold text-slate-900">{c.name}</h4>
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${c.is_active ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}`}>
@@ -229,7 +269,9 @@ export default function OrganizationDashboard() {
                                     </div>
                                     <div className="flex gap-2 text-sm font-medium pt-2 border-t border-slate-50">
                                         <button onClick={() => openManageProducts(c)} className="text-primary-600 hover:text-primary-700 flex-1 text-left">Manage Products</button>
-                                        <Link to={`/c/${c.id}`} target="_blank" className="text-slate-500 hover:text-slate-700">View Public →</Link>
+                                        <Link to={`/c/${c.id}`} target="_blank" className="text-slate-500 hover:text-slate-700 mr-2">View</Link>
+                                        <button onClick={() => openEditCampaign(c)} className="text-slate-400 hover:text-slate-600">✎</button>
+                                        <button onClick={() => handleDeleteCampaign(c.id)} className="text-red-300 hover:text-red-500 ml-1">🗑</button>
                                     </div>
                                 </div>
                             ))}
@@ -291,6 +333,51 @@ export default function OrganizationDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Campaign Edit Modal */}
+            {editingCampaign && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-slate-900">Edit Campaign</h3>
+                            <button onClick={() => setEditingCampaign(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                        </div>
+                        <form onSubmit={handleUpdateCampaign} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                                <input type="text" required className="w-full rounded-lg border-slate-200" value={editingCampaign.name} onChange={e => setEditingCampaign({ ...editingCampaign, name: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                                    <input type="date" required className="w-full rounded-lg border-slate-200" value={editingCampaign.start_date} onChange={e => setEditingCampaign({ ...editingCampaign, start_date: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+                                    <input type="date" required className="w-full rounded-lg border-slate-200" value={editingCampaign.end_date} onChange={e => setEditingCampaign({ ...editingCampaign, end_date: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={editingCampaign.is_active}
+                                        onChange={e => setEditingCampaign({ ...editingCampaign, is_active: e.target.checked })}
+                                        className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 h-5 w-5"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700">Active (Visible to public)</span>
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setEditingCampaign(null)} className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
+                                <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Manage Products Modal */}
             {selectedCampaign && (

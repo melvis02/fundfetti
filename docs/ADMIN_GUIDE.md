@@ -29,7 +29,8 @@ Once inside an Organization's dashboard (`/organizations/:id`):
 2.  **Launch New Campaign**: Enter Name, Start Date, End Date.
 3.  The Campaign will be listed with its status.
 4.  **Manage Products**: Click "Manage Products" on a campaign card to select which Organization Products are available for sale in this campaign.
-5.  **Public Link**: The campaign is accessible to the public at `/c/{campaign_id}`.
+5.  **Edit/Delete**: Click the Pencil icon to edit campaign details (including Active status) or the Trash icon to delete it.
+6.  **Public Link**: The campaign is accessible to the public at `/c/{campaign_id}`.
 
 ## Order Management
 

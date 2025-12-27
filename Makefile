@@ -10,6 +10,8 @@ vet:
 
 build: fmt vet
 	go build -o ./bin/flower-fundraiser-processing
+	cd frontend && npm run build && cd ../
+
 
 docker-build:
 	docker build -t melvis02/flower-fundraiser-processing:latest .
