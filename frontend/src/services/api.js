@@ -1,0 +1,93 @@
+const API_BASE = '/api';
+
+export const api = {
+    // Organizations
+    getOrganizations: async () => {
+        const res = await fetch(`${API_BASE}/organizations`);
+        if (!res.ok) throw new Error('Failed to fetch organizations');
+        return res.json();
+    },
+    createOrganization: async (org) => {
+        const res = await fetch(`${API_BASE}/organizations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(org),
+        });
+        if (!res.ok) throw new Error('Failed to create organization');
+        return res.json();
+    },
+    getOrganization: async (id) => {
+        const res = await fetch(`${API_BASE}/organizations/${id}`);
+        if (!res.ok) throw new Error('Failed to fetch organization');
+        return res.json();
+    },
+
+    // Products (Scoped)
+    getOrgProducts: async (orgId) => {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/products`);
+        if (!res.ok) throw new Error('Failed to fetch products');
+        return res.json();
+    },
+    createProduct: async (orgId, product) => {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(product),
+        });
+        if (!res.ok) throw new Error('Failed to create product');
+        return res.json();
+    },
+    deleteProduct: async (id) => {
+        const res = await fetch(`${API_BASE}/products/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete product');
+    },
+
+    // Campaigns (Scoped)
+    getOrgCampaigns: async (orgId) => {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/campaigns`);
+        if (!res.ok) throw new Error('Failed to fetch campaigns');
+        return res.json();
+    },
+    createCampaign: async (orgId, campaign) => {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/campaigns`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(campaign),
+        });
+        if (!res.ok) throw new Error('Failed to create campaign');
+        return res.json();
+    },
+    deleteCampaign: async (id) => {
+        const res = await fetch(`${API_BASE}/campaigns/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete campaign');
+    },
+    addCampaignProduct: async (campaignId, productId) => {
+        const res = await fetch(`${API_BASE}/campaigns/${campaignId}/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: productId })
+        });
+        if (!res.ok) throw new Error('Failed to link product');
+    },
+    removeCampaignProduct: async (campaignId, productId) => {
+        const res = await fetch(`${API_BASE}/campaigns/${campaignId}/products/${productId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to unlink product');
+    },
+
+    // Public / Ordering
+    getCampaignPublic: async (id) => {
+        // Using existing endpoint as it returns products too
+        const res = await fetch(`${API_BASE}/campaigns/${id}`);
+        if (!res.ok) throw new Error('Failed to fetch campaign');
+        return res.json();
+    },
+    submitOrder: async (order) => {
+        const res = await fetch(`${API_BASE}/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order),
+        });
+        if (!res.ok) throw new Error('Failed to submit order');
+        return res.json();
+    }
+};
