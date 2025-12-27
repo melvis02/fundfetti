@@ -30,7 +30,37 @@ func StartServer() {
 	// Unified Modern Routes - JSON API
 	router.HandleFunc("/api/orders", getOrdersHandler).Methods("GET")
 	router.HandleFunc("/api/upload", uploadHandler).Methods("POST")
+	router.HandleFunc("/api/orders", createOrderHandler).Methods("POST")
 	router.HandleFunc("/api/orders/{id}/status", orderStatusHandler).Methods("POST")
+
+	// Organization API
+	router.HandleFunc("/api/organizations", listOrganizationsHandler).Methods("GET")
+	router.HandleFunc("/api/organizations", createOrganizationHandler).Methods("POST")
+	router.HandleFunc("/api/organizations/{id}", getOrganizationHandler).Methods("GET")
+	router.HandleFunc("/api/organizations/{id}", updateOrganizationHandler).Methods("PUT")
+	router.HandleFunc("/api/organizations/{id}", deleteOrganizationHandler).Methods("DELETE")
+
+	// Nested Resources under Organizations
+	router.HandleFunc("/api/organizations/{org_id}/products", listProductsHandler).Methods("GET")
+	router.HandleFunc("/api/organizations/{org_id}/products", createProductHandler).Methods("POST")
+	router.HandleFunc("/api/organizations/{org_id}/campaigns", listCampaignsHandler).Methods("GET")
+	router.HandleFunc("/api/organizations/{org_id}/campaigns", createCampaignHandler).Methods("POST")
+
+	// Product API (Global/Direct access) - Consider deprecating or making Admin only
+	router.HandleFunc("/api/products", listProductsHandler).Methods("GET")
+	router.HandleFunc("/api/products", createProductHandler).Methods("POST")
+	router.HandleFunc("/api/products/{id}", getProductHandler).Methods("GET")
+	router.HandleFunc("/api/products/{id}", updateProductHandler).Methods("PUT")
+	router.HandleFunc("/api/products/{id}", deleteProductHandler).Methods("DELETE")
+
+	// Campaign API (Global/Direct access)
+	router.HandleFunc("/api/campaigns", listCampaignsHandler).Methods("GET")
+	router.HandleFunc("/api/campaigns", createCampaignHandler).Methods("POST")
+	router.HandleFunc("/api/campaigns/{id}", getCampaignHandler).Methods("GET")
+	router.HandleFunc("/api/campaigns/{id}", updateCampaignHandler).Methods("PUT")
+	router.HandleFunc("/api/campaigns/{id}", deleteCampaignHandler).Methods("DELETE")
+	router.HandleFunc("/api/campaigns/{id}/products", addCampaignProductHandler).Methods("POST")
+	router.HandleFunc("/api/campaigns/{id}/products/{product_id}", removeCampaignProductHandler).Methods("DELETE")
 
 	// SPA Handler (Serve React App)
 	// 1. Serve static assets directly
@@ -99,9 +129,18 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	data := ordersheets.ReadFile(buf.Bytes(), header.Filename)
 	orders := ordersheets.FormatOrderSheet(data)
 
+	campaignIDStr := r.FormValue("campaign_id")
+	var campaignID *int64
+	if campaignIDStr != "" {
+		if id, err := strconv.ParseInt(campaignIDStr, 10, 64); err == nil {
+			campaignID = &id
+		}
+	}
+
 	// Persist orders to DB
 	count := 0
 	for _, order := range orders {
+		order.CampaignID = campaignID
 		if err := db.UpsertOrder(order); err != nil {
 			log.Printf("Failed to upsert order for %s: %v", order.Name, err)
 		} else {

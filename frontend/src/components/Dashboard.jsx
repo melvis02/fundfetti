@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import UploadForm from './UploadForm';
 
 export default function Dashboard() {
@@ -59,6 +60,9 @@ export default function Dashboard() {
                             <p className="text-slate-400 mt-1">Manage orders, payments, and pickups</p>
                         </div>
                         <div className="flex gap-3">
+                            <Link to="/organizations" className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-lg transition-colors font-medium border border-slate-600 shadow-sm">
+                                <span>🏢</span> Orgs
+                            </Link>
                             <a href="/print/summary" target="_blank" className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-lg transition-colors font-medium border border-slate-600 shadow-sm">
                                 <span>📄</span> Order Summary
                             </a>
