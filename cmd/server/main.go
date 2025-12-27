@@ -84,10 +84,9 @@ func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	file, _, err := r.FormFile("orders_sheets")
+	file, header, err := r.FormFile("orders_sheets")
 	if err != nil {
 		http.Error(w, "Error retrieving file: "+err.Error(), http.StatusBadRequest)
-		return
 	}
 	defer file.Close()
 
@@ -97,7 +96,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := ordersheets.ReadTSV(buf.Bytes())
+	data := ordersheets.ReadFile(buf.Bytes(), header.Filename)
 	orders := ordersheets.FormatOrderSheet(data)
 
 	// Persist orders to DB

@@ -30,11 +30,16 @@ type Order struct {
 	OrderedPlants []OrderedPlant
 }
 
-func ReadTSV(file []byte) [][]string {
+func ReadFile(file []byte, filename string) [][]string {
 	records := [][]string{}
 
 	reader := csv.NewReader(bytes.NewReader(file))
-	reader.Comma = '\t'
+	if strings.HasSuffix(strings.ToLower(filename), ".tsv") {
+		reader.Comma = '\t'
+	} else if strings.HasSuffix(strings.ToLower(filename), ".csv") {
+		reader.Comma = ','
+	}
+
 	for {
 		record, err := reader.Read()
 		if err != nil {
