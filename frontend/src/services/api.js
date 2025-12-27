@@ -21,6 +21,19 @@ export const api = {
         if (!res.ok) throw new Error('Failed to fetch organization');
         return res.json();
     },
+    updateOrganization: async (id, org) => {
+        const res = await fetch(`${API_BASE}/organizations/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(org),
+        });
+        if (!res.ok) throw new Error('Failed to update organization');
+        return res.json();
+    },
+    deleteOrganization: async (id) => {
+        const res = await fetch(`${API_BASE}/organizations/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete organization');
+    },
 
     // Products (Scoped)
     getOrgProducts: async (orgId) => {
@@ -55,6 +68,15 @@ export const api = {
             body: JSON.stringify(campaign),
         });
         if (!res.ok) throw new Error('Failed to create campaign');
+        return res.json();
+    },
+    updateCampaign: async (id, campaign) => {
+        const res = await fetch(`${API_BASE}/campaigns/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(campaign),
+        });
+        if (!res.ok) throw new Error('Failed to update campaign');
         return res.json();
     },
     deleteCampaign: async (id) => {

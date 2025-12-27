@@ -37,6 +37,31 @@ export default function Organizations() {
         }
     };
 
+    const [editingOrg, setEditingOrg] = useState(null);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this organization? This action cannot be undone and will delete all associated campaigns and products.")) return;
+        try {
+            await api.deleteOrganization(id);
+            fetchOrgs();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to delete organization');
+        }
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            await api.updateOrganization(editingOrg.id, editingOrg);
+            setEditingOrg(null);
+            fetchOrgs();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update organization');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
             {/* Header */}
@@ -121,10 +146,12 @@ export default function Organizations() {
                                         <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-900">{org.name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-slate-500">{org.slug}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-slate-500">{org.contact_email}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                        <td className="px-6 py-4 whitespace-nowrap text-right flex justify-end gap-3 items-center">
+                                            <button onClick={() => setEditingOrg(org)} className="text-slate-500 hover:text-slate-800 text-sm font-medium">Edit</button>
+                                            <button onClick={() => handleDelete(org.id)} className="text-red-500 hover:text-red-800 text-sm font-medium">Delete</button>
                                             <Link
                                                 to={`/organizations/${org.id}`}
-                                                className="text-primary-600 hover:text-primary-900 font-medium"
+                                                className="text-primary-600 hover:text-primary-900 font-medium text-sm"
                                             >
                                                 Manage →
                                             </Link>
@@ -136,6 +163,54 @@ export default function Organizations() {
                     </table>
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            {editingOrg && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-slate-900">Edit Organization</h3>
+                            <button onClick={() => setEditingOrg(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                        </div>
+                        <form onSubmit={handleUpdate} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full rounded-lg border-slate-200 focus:border-primary-500 focus:ring-primary-500"
+                                    value={editingOrg.name}
+                                    onChange={e => setEditingOrg({ ...editingOrg, name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Slug</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full rounded-lg border-slate-200 focus:border-primary-500 focus:ring-primary-500"
+                                    value={editingOrg.slug}
+                                    onChange={e => setEditingOrg({ ...editingOrg, slug: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Contact Email</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="w-full rounded-lg border-slate-200 focus:border-primary-500 focus:ring-primary-500"
+                                    value={editingOrg.contact_email}
+                                    onChange={e => setEditingOrg({ ...editingOrg, contact_email: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setEditingOrg(null)} className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
+                                <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
