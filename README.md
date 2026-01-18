@@ -1,4 +1,4 @@
-# Fundraiser Order Processing
+# Fundfetti Order Management
 
 High-performance order processing system for non-profit fundraisers. Originally a CLI/scripting tool, now expanded into a full-featured web platform supporting multi-tenant organizations, campaign management, and public ordering.
 
@@ -49,5 +49,12 @@ High-performance order processing system for non-profit fundraisers. Originally 
 - [x] Multi-Tenancy (Organizations)
 - [x] Admin Dashboard
 - [x] Public Ordering Flow
-- [ ] Authentication & Authorization (Next Phase)
+- [ ] Separate Admin & Public User Interfaces
+- [ ] Site-wide Organization Selection
+- [ ] Vanity URLs for Organizations & Campaigns
+- [ ] Migrate the Orders Management interface to the Admin Dashboard
+- [ ] Filtering on Orders Dashboard
+- [ ] Authentication & Authorization
+- [ ] User Management
+- [ ] Basic RBAC for Admins (Global Administrator, Organization Administrator, Campaign Administrator, Reader)
 - [ ] Payment Gateway Integration (Stripe/Square API)

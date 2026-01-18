@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 
-export default function UploadForm({ onUploadSuccess }) {
+export default function UploadForm({ onUploadSuccess, campaigns = [] }) {
     const [file, setFile] = useState(null);
+    const [selectedCampaignId, setSelectedCampaignId] = useState('');
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState(null);
     const [isDragOver, setIsDragOver] = useState(false);
@@ -15,6 +16,9 @@ export default function UploadForm({ onUploadSuccess }) {
 
         const formData = new FormData();
         formData.append('orders_sheets', file);
+        if (selectedCampaignId) {
+            formData.append('campaign_id', selectedCampaignId);
+        }
 
         try {
             const res = await fetch('/api/upload', {
@@ -96,6 +100,22 @@ export default function UploadForm({ onUploadSuccess }) {
                         </div>
                     )}
                 </div>
+
+                {campaigns.length > 0 && (
+                    <div className="mt-4">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Assign to Campaign</label>
+                        <select
+                            value={selectedCampaignId}
+                            onChange={e => setSelectedCampaignId(e.target.value)}
+                            className="w-full rounded-lg border-slate-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                        >
+                            <option value="">-- Select Campaign (Optional) --</option>
+                            {campaigns.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {file && (
                     <div className="mt-4 flex items-center justify-end gap-3">

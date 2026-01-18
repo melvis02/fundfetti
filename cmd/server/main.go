@@ -14,8 +14,8 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
-	"github.com/melvis02/flower-fundraiser-processing/internal/db"
-	"github.com/melvis02/flower-fundraiser-processing/internal/ordersheets"
+	"github.com/melvis02/fundfetti/internal/db"
+	"github.com/melvis02/fundfetti/internal/ordersheets"
 )
 
 func StartServer() {
@@ -103,7 +103,21 @@ func StartServer() {
 }
 
 func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	orders, err := db.GetOrders()
+	var orders []db.DBOrder
+	var err error
+
+	orgIDStr := r.URL.Query().Get("org_id")
+	if orgIDStr != "" {
+		if orgID, parseErr := strconv.ParseInt(orgIDStr, 10, 64); parseErr == nil {
+			orders, err = db.GetOrganizationOrders(orgID)
+		} else {
+			http.Error(w, "Invalid org_id", http.StatusBadRequest)
+			return
+		}
+	} else {
+		orders, err = db.GetOrders()
+	}
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get orders: %v", err), http.StatusInternalServerError)
 		return

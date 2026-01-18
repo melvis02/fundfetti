@@ -1,4 +1,4 @@
-module github.com/melvis02/flower-fundraiser-processing
+module github.com/melvis02/fundfetti
 
 go 1.24.0
 

@@ -9,21 +9,21 @@ vet:
 	go vet ./...
 
 build: fmt vet
-	go build -o ./bin/flower-fundraiser-processing
+	go build -o ./bin/fundfetti
 	cd frontend && npm run build && cd ../
 
 
 docker-build:
-	docker build -t melvis02/flower-fundraiser-processing:latest .
+	docker build -t melvis02/fundfetti:latest .
 
 docker-tag:
-	docker tag melvis02/flower-fundraiser-processing:latest melvis02/flower-fundraiser-processing:latest
+	docker tag melvis02/fundfetti:latest melvis02/fundfetti:latest
 
 docker-login:
 	docker login
 
 docker-push: docker-login
-	docker push melvis02/flower-fundraiser-processing:latest
+	docker push melvis02/fundfetti:latest
 
 docker-run:
-	docker run -p 8080:8080 melvis02/flower-fundraiser-processing:latest
+	docker run -p 8080:8080 melvis02/fundfetti:latest

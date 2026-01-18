@@ -1,23 +1,23 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: flower-fundraiser-processing
+  name: fundfetti
   labels:
-    app: flower-fundraiser-processing
+    app: fundfetti
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: flower-fundraiser-processing
+      app: fundfetti
   template:
     metadata:
-      name: flower-fundraiser-processing
+      name: fundfetti
       labels:
-        app: flower-fundraiser-processing
+        app: fundfetti
     spec:
       containers:
-        - name: flower-fundraiser-processing
-          image: 'melvis02/flower-fundraiser-processing:latest'
+        - name: fundfetti
+          image: 'melvis02/fundfetti:latest'
           resources:
             limits:
               memory: "512Mi"
@@ -29,12 +29,12 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: flower-fundraiser-processing
+  name: fundfetti
 spec:
   selector:
-    app: flower-fundraiser-processing
+    app: fundfetti
   ports:
-    - name: flower-fundraiser-processing-port
+    - name: fundfetti-port
       port: 443
       protocol: TCP
       targetPort: 8080
@@ -42,7 +42,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: flower-fundraiser-processing
+  name: fundfetti
   annotations:
     cert-manager.io/issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/use-regex: "true"
@@ -54,7 +54,7 @@ metadata:
         paths:
         - backend:
             service:
-              name: flower-fundraiser-processing
+              name: fundfetti
               port:
                 number: 443
           path: /(.*)
@@ -62,5 +62,3 @@ metadata:
     tls:
     - hosts:
       - flowers.treympick.me
----
-
