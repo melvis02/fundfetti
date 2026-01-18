@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/melvis02/flower-fundraiser-processing/internal/db"
-	"github.com/melvis02/flower-fundraiser-processing/internal/ordersheets"
+	"github.com/melvis02/fundfetti/internal/db"
+	"github.com/melvis02/fundfetti/internal/ordersheets"
 )
 
 // -- Orders --

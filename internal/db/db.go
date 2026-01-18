@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/melvis02/flower-fundraiser-processing/internal/ordersheets"
+	"github.com/melvis02/fundfetti/internal/ordersheets"
 	_ "modernc.org/sqlite"
 )
 
@@ -247,6 +247,45 @@ func GetOrders() ([]DBOrder, error) {
 		// Only fetching basic info for the list view for now.
 		// If we need items in the main list, we can add a subquery or join later.
 		// For the requested "Manage Orders" view (Name, Phone, Total Items, Status), logic below:
+
+		// Fetch item count or details
+		itemRows, err := DB.Query("SELECT plant_type, quantity FROM order_items WHERE order_id = ?", o.ID)
+		if err == nil {
+			defer itemRows.Close()
+			for itemRows.Next() {
+				var i DBOrderItem
+				if err := itemRows.Scan(&i.PlantType, &i.Quantity); err == nil {
+					o.Items = append(o.Items, i)
+				}
+			}
+		}
+
+		orders = append(orders, o)
+	}
+	return orders, nil
+}
+
+func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
+	query := `
+		SELECT o.id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+		FROM orders o
+		JOIN campaigns c ON o.campaign_id = c.id
+		WHERE c.organization_id = ?
+		ORDER BY o.name ASC
+	`
+	rows, err := DB.Query(query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []DBOrder
+	for rows.Next() {
+		var o DBOrder
+		if err := rows.Scan(&o.ID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt); err != nil {
+			log.Printf("Error scanning order: %v", err)
+			continue
+		}
 
 		// Fetch item count or details
 		itemRows, err := DB.Query("SELECT plant_type, quantity FROM order_items WHERE order_id = ?", o.ID)

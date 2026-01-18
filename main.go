@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/melvis02/flower-fundraiser-processing/cmd/server"
+	"github.com/melvis02/fundfetti/cmd/server"
 )
 
 func main() {

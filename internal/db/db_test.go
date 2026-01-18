@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/melvis02/flower-fundraiser-processing/internal/ordersheets"
+	"github.com/melvis02/fundfetti/internal/ordersheets"
 )
 
 func TestPhase1Integration(t *testing.T) {

@@ -1,20 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import UploadForm from './UploadForm';
+import { useAdmin } from '../context/AdminContext';
 
 export default function Dashboard() {
     const [orders, setOrders] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { currentOrg } = useAdmin();
 
     useEffect(() => {
+        console.log("Dashboard useEffect triggered. currentOrg:", currentOrg);
         fetchOrders();
-    }, []);
+        fetchCampaigns();
+    }, [currentOrg]);
 
-    const fetchOrders = async () => {
+    const fetchCampaigns = async () => {
+        if (!currentOrg) {
+            setCampaigns([]);
+            return;
+        }
         try {
-            const res = await fetch('/api/orders');
+            const res = await fetch(`/api/organizations/${currentOrg.id}/campaigns`);
             if (res.ok) {
                 const data = await res.json();
+                setCampaigns(data || []);
+            }
+        } catch (e) {
+            console.error("Failed to fetch campaigns", e);
+        }
+    };
+
+    const fetchOrders = async () => {
+        setLoading(true);
+        try {
+            // TODO: Use currentOrg.id to filter orders
+            const endpoint = currentOrg ? `/api/orders?org_id=${currentOrg.id}` : '/api/orders';
+            console.log("Fetching orders from:", endpoint);
+            const res = await fetch(endpoint);
+            if (res.ok) {
+                const data = await res.json();
+                console.log("Orders received:", data ? data.length : 0);
                 setOrders(data || []);
             }
         } catch (error) {
@@ -50,31 +76,8 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-lg">
-                <div className="container mx-auto px-6 py-8">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Flower Fundraiser</h1>
-                            <p className="text-slate-400 mt-1">Manage orders, payments, and pickups</p>
-                        </div>
-                        <div className="flex gap-3">
-                            <Link to="/organizations" className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-lg transition-colors font-medium border border-slate-600 shadow-sm">
-                                <span>🏢</span> Orgs
-                            </Link>
-                            <a href="/print/summary" target="_blank" className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-lg transition-colors font-medium border border-slate-600 shadow-sm">
-                                <span>📄</span> Order Summary
-                            </a>
-                            <a href="/print/orders" target="_blank" className="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-4 py-2.5 rounded-lg transition-colors font-medium shadow-md shadow-primary-900/20">
-                                <span>🏷️</span> Print Labels
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="container mx-auto px-6 py-8 -mt-8">
+        <div className="min-h-screen font-sans text-slate-800">
+            <div className="container mx-auto px-6 py-8">
 
                 {/* Upload Card */}
                 <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 mb-8 relative z-10">
@@ -82,7 +85,7 @@ export default function Dashboard() {
                         <span className="bg-primary-100 text-primary-700 p-1.5 rounded-md text-sm">📥</span>
                         Import Orders
                     </h2>
-                    <UploadForm onUploadSuccess={fetchOrders} />
+                    <UploadForm onUploadSuccess={fetchOrders} campaigns={campaigns} />
                 </div>
 
                 {/* Orders Table Card */}
@@ -95,6 +98,14 @@ export default function Dashboard() {
                                 {orders.length} entries
                             </span>
                         </h2>
+                        <div className="flex gap-2">
+                            <a href="/print/summary" target="_blank" className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition-colors font-medium border border-slate-200 text-sm">
+                                <span>📄</span> Summary
+                            </a>
+                            <a href="/print/orders" target="_blank" className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition-colors font-medium border border-slate-200 text-sm">
+                                <span>🏷️</span> Labels
+                            </a>
+                        </div>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -180,7 +191,7 @@ export default function Dashboard() {
                     </div>
                     <div className="bg-slate-50 px-6 py-3 border-t border-slate-100">
                         <p className="text-xs text-slate-500 text-center">
-                            Flower Fundraiser Order Management System
+                            Fundfetti Order Management System
                         </p>
                     </div>
                 </div>
