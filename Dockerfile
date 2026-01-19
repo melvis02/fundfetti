@@ -1,34 +1,27 @@
-# Use the official Go image as the base
-FROM golang:1.25-alpine AS builder
+# Stage 1: Build React App
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
 
-# Set the working directory within the container
+# Stage 2: Build Go App
+FROM golang:1.24-alpine AS backend-builder
 WORKDIR /app
-
-# Copy the Go module files
 COPY go.mod go.sum ./
-
-# Download the Go modules
-RUN go mod download && go mod verify
-
-# Copy the rest of the application code
+RUN go mod download
 COPY . .
-
-# Build the Go binary
 RUN go build -o main .
 
-# Create a minimal runtime image
+# Stage 3: Final Image
 FROM alpine:latest
-
-# Set the working directory within the container
 WORKDIR /app
+COPY --from=backend-builder /app/main .
+COPY --from=backend-builder /app/public/ ./public/
+COPY --from=backend-builder /app/templates/ ./templates/
+# Copy the built frontend assets from Stage 1 to where Go expects them
+COPY --from=frontend-builder /app/frontend/dist/ ./frontend/dist/
 
-# Copy the binary from the build stage
-COPY --from=builder /app/main .
-COPY --from=builder /app/templates/ ./templates/
-COPY --from=builder /app/public/ ./public/
-
-# Expose the port your application listens on
 EXPOSE 8080
-
-# Run the application
 CMD ["./main"]
