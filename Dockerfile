@@ -13,11 +13,14 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN go build -o main .
+# Build seed tool
+RUN go build -o seed ./cmd/seed
 
 # Stage 3: Final Image
 FROM alpine:latest
 WORKDIR /app
 COPY --from=backend-builder /app/main .
+COPY --from=backend-builder /app/seed .
 COPY --from=backend-builder /app/public/ ./public/
 COPY --from=backend-builder /app/templates/ ./templates/
 # Copy the built frontend assets from Stage 1 to where Go expects them
