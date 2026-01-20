@@ -13,8 +13,31 @@ import (
 )
 
 var DB *sql.DB
+var currentDriver string
+
+func Rebind(query string) string {
+	if currentDriver != "postgres" {
+		return query
+	}
+
+	// Replace ? with $1, $2, etc.
+	// This is a simple implementation assuming ? is not used in string literals.
+	// For this project, it's sufficient.
+	count := 0
+	result := strings.Builder{}
+	for _, char := range query {
+		if char == '?' {
+			count++
+			result.WriteString(fmt.Sprintf("$%d", count))
+		} else {
+			result.WriteRune(char)
+		}
+	}
+	return result.String()
+}
 
 func InitDB(driverName, dataSourceName string) error {
+	currentDriver = driverName
 	var err error
 	DB, err = sql.Open(driverName, dataSourceName)
 	if err != nil {
@@ -190,14 +213,14 @@ func UpsertOrder(order ordersheets.Order) error {
 	var orderID int64
 
 	// Try to find existing order
-	err = tx.QueryRow("SELECT id FROM orders WHERE name = ? AND email = ?", order.Name, order.Email).Scan(&orderID)
+	err = tx.QueryRow(Rebind("SELECT id FROM orders WHERE name = ? AND email = ?"), order.Name, order.Email).Scan(&orderID)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("failed to check existing order: %w", err)
 	}
 
 	if err == sql.ErrNoRows {
 		// New order
-		res, err := tx.Exec("INSERT INTO orders (name, email, phone, campaign_id) VALUES (?, ?, ?, ?)", order.Name, order.Email, order.PhoneNumber, order.CampaignID)
+		res, err := tx.Exec(Rebind("INSERT INTO orders (name, email, phone, campaign_id) VALUES (?, ?, ?, ?)"), order.Name, order.Email, order.PhoneNumber, order.CampaignID)
 		if err != nil {
 			return fmt.Errorf("failed to insert order: %w", err)
 		}
@@ -209,20 +232,20 @@ func UpsertOrder(order ordersheets.Order) error {
 		// Existing order - update phone if needed, but DO NOT overwrite picked_up/paid
 		// Also update campaign_id if it's set on the incoming order (assuming we want to link it if it wasn't linked or update it)
 		// For now, let's just update phone and campaign_id
-		_, err = tx.Exec("UPDATE orders SET phone = ?, campaign_id = COALESCE(?, campaign_id) WHERE id = ?", order.PhoneNumber, order.CampaignID, orderID)
+		_, err = tx.Exec(Rebind("UPDATE orders SET phone = ?, campaign_id = COALESCE(?, campaign_id) WHERE id = ?"), order.PhoneNumber, order.CampaignID, orderID)
 		if err != nil {
 			return fmt.Errorf("failed to update order: %w", err)
 		}
 
 		// Delete existing items to replace them (simplest way to handle CSV updates)
-		_, err = tx.Exec("DELETE FROM order_items WHERE order_id = ?", orderID)
+		_, err = tx.Exec(Rebind("DELETE FROM order_items WHERE order_id = ?"), orderID)
 		if err != nil {
 			return fmt.Errorf("failed to delete invalid order items: %w", err)
 		}
 	}
 
 	// 2. Insert Order Items
-	stmt, err := tx.Prepare("INSERT INTO order_items (order_id, plant_type, quantity) VALUES (?, ?, ?)")
+	stmt, err := tx.Prepare(Rebind("INSERT INTO order_items (order_id, plant_type, quantity) VALUES (?, ?, ?)"))
 	if err != nil {
 		return fmt.Errorf("failed to prepare item statement: %w", err)
 	}
@@ -314,7 +337,7 @@ func GetOrders() ([]DBOrder, error) {
 		// For the requested "Manage Orders" view (Name, Phone, Total Items, Status), logic below:
 
 		// Fetch item count or details
-		itemRows, err := DB.Query("SELECT plant_type, quantity FROM order_items WHERE order_id = ?", o.ID)
+		itemRows, err := DB.Query(Rebind("SELECT plant_type, quantity FROM order_items WHERE order_id = ?"), o.ID)
 		if err == nil {
 			defer itemRows.Close()
 			for itemRows.Next() {
@@ -338,7 +361,7 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 		WHERE c.organization_id = ?
 		ORDER BY o.name ASC
 	`
-	rows, err := DB.Query(query, orgID)
+	rows, err := DB.Query(Rebind(query), orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +376,7 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 		}
 
 		// Fetch item count or details
-		itemRows, err := DB.Query("SELECT plant_type, quantity FROM order_items WHERE order_id = ?", o.ID)
+		itemRows, err := DB.Query(Rebind("SELECT plant_type, quantity FROM order_items WHERE order_id = ?"), o.ID)
 		if err == nil {
 			defer itemRows.Close()
 			for itemRows.Next() {
@@ -370,6 +393,6 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 }
 
 func UpdateOrderStatus(id int64, pickedUp, paid bool) error {
-	_, err := DB.Exec("UPDATE orders SET picked_up = ?, paid = ? WHERE id = ?", pickedUp, paid, id)
+	_, err := DB.Exec(Rebind("UPDATE orders SET picked_up = ?, paid = ? WHERE id = ?"), pickedUp, paid, id)
 	return err
 }
