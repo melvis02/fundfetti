@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"log"
 )
 
 // CreateUser creates a new user.
@@ -85,7 +86,10 @@ func UpdateUser(id int64, email string, role string, orgID *int64, passwordHash 
 	// Simplification: Update basic fields. Password only if provided.
 
 	if passwordHash != nil {
-		_, err := DB.Exec(Rebind("UPDATE users SET email=?, role=?, organization_id=?, password_hash=? WHERE id=?"), email, role, orgID, *passwordHash, id)
+		log.Println("[DEBUG] UpdateUser: Password hash provided. Calling Rebind...")
+		q := Rebind("UPDATE users SET email=?, role=?, organization_id=?, password_hash=? WHERE id=?")
+		log.Printf("[DEBUG] UpdateUser: Final Query: %s", q)
+		_, err := DB.Exec(q, email, role, orgID, *passwordHash, id)
 		return err
 	}
 
