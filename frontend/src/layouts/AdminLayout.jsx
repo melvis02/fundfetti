@@ -1,9 +1,11 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminLayout() {
     const { orgs, currentOrg, setCurrentOrg, loading } = useAdmin();
+    const { user, logout } = useAuth();
     const location = useLocation();
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">Loading Admin Config...</div>;
@@ -32,14 +34,19 @@ export default function AdminLayout() {
                                             Current Org ({currentOrg.slug})
                                         </Link>
                                     )}
-                                    <Link to="/admin/organizations" className={navClass('/admin/organizations')}>All Orgs</Link>
+                                    {user?.role === 'global_admin' && (
+                                        <>
+                                            <Link to="/admin/organizations" className={navClass('/admin/organizations')}>All Orgs</Link>
+                                            <Link to="/admin/users" className={navClass('/admin/users')}>Users</Link>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Right: Org Switcher & User Profile (Placeholder) */}
+                        {/* Right: Org Switcher & User Profile */}
                         <div className="flex items-center gap-4">
-                            {orgs.length > 0 ? (
+                            {orgs.length > 0 && user?.role === 'global_admin' ? (
                                 <div className="relative">
                                     <select
                                         className="appearance-none bg-slate-700 border border-slate-600 text-white py-1.5 pl-3 pr-8 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
@@ -60,8 +67,20 @@ export default function AdminLayout() {
                             ) : (
                                 <span className="text-sm text-slate-400">No Orgs Found</span>
                             )}
-                            <div className="h-8 w-8 rounded-full bg-slate-600 flex items-center justify-center text-xs font-medium">
-                                AD
+                            <div className="flex items-center gap-3 pl-4 border-l border-slate-700">
+                                <div className="text-xs text-right hidden sm:block">
+                                    <div className="font-medium text-white">{user?.email}</div>
+                                    <div className="text-slate-400 capitalize">{user?.role?.replace('_', ' ')}</div>
+                                </div>
+                                <button
+                                    onClick={logout}
+                                    className="p-1.5 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                                    title="Logout"
+                                >
+                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 01 3 3v1" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>

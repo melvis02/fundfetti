@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
+	"github.com/melvis02/fundfetti/internal/auth"
 	"github.com/melvis02/fundfetti/internal/db"
 	"github.com/melvis02/fundfetti/internal/ordersheets"
 )
@@ -27,40 +28,58 @@ func StartServer() {
 
 	router := mux.NewRouter()
 
-	// Unified Modern Routes - JSON API
-	router.HandleFunc("/api/orders", getOrdersHandler).Methods("GET")
-	router.HandleFunc("/api/upload", uploadHandler).Methods("POST")
+	// Auth Routes
+	router.HandleFunc("/api/auth/login", auth.LoginHandler).Methods("POST")
+	router.HandleFunc("/api/auth/logout", auth.LogoutHandler).Methods("POST")
+	router.HandleFunc("/api/auth/me", auth.MeHandler).Methods("GET")
+
+	// Public Routes
 	router.HandleFunc("/api/orders", createOrderHandler).Methods("POST")
-	router.HandleFunc("/api/orders/{id}/status", orderStatusHandler).Methods("POST")
-
-	// Organization API
-	router.HandleFunc("/api/organizations", listOrganizationsHandler).Methods("GET")
-	router.HandleFunc("/api/organizations", createOrganizationHandler).Methods("POST")
-	router.HandleFunc("/api/organizations/{id}", getOrganizationHandler).Methods("GET")
-	router.HandleFunc("/api/organizations/{id}", updateOrganizationHandler).Methods("PUT")
-	router.HandleFunc("/api/organizations/{id}", deleteOrganizationHandler).Methods("DELETE")
-
-	// Nested Resources under Organizations
-	router.HandleFunc("/api/organizations/{org_id}/products", listProductsHandler).Methods("GET")
-	router.HandleFunc("/api/organizations/{org_id}/products", createProductHandler).Methods("POST")
-	router.HandleFunc("/api/organizations/{org_id}/campaigns", listCampaignsHandler).Methods("GET")
-	router.HandleFunc("/api/organizations/{org_id}/campaigns", createCampaignHandler).Methods("POST")
-
-	// Product API (Global/Direct access) - Consider deprecating or making Admin only
-	router.HandleFunc("/api/products", listProductsHandler).Methods("GET")
-	router.HandleFunc("/api/products", createProductHandler).Methods("POST")
-	router.HandleFunc("/api/products/{id}", getProductHandler).Methods("GET")
-	router.HandleFunc("/api/products/{id}", updateProductHandler).Methods("PUT")
-	router.HandleFunc("/api/products/{id}", deleteProductHandler).Methods("DELETE")
-
-	// Campaign API (Global/Direct access)
-	router.HandleFunc("/api/campaigns", listCampaignsHandler).Methods("GET")
-	router.HandleFunc("/api/campaigns", createCampaignHandler).Methods("POST")
 	router.HandleFunc("/api/campaigns/{id}", getCampaignHandler).Methods("GET")
-	router.HandleFunc("/api/campaigns/{id}", updateCampaignHandler).Methods("PUT")
-	router.HandleFunc("/api/campaigns/{id}", deleteCampaignHandler).Methods("DELETE")
-	router.HandleFunc("/api/campaigns/{id}/products", addCampaignProductHandler).Methods("POST")
-	router.HandleFunc("/api/campaigns/{id}/products/{product_id}", removeCampaignProductHandler).Methods("DELETE")
+	router.HandleFunc("/api/campaigns", listCampaignsHandler).Methods("GET") // Public for now
+	router.HandleFunc("/api/products", listProductsHandler).Methods("GET")   // Public for now
+
+	// Protected Admin Routes
+	adminRouter := router.PathPrefix("/api").Subrouter()
+	adminRouter.Use(auth.AuthMiddleware)
+
+	// Admin: Orders
+	adminRouter.HandleFunc("/orders", getOrdersHandler).Methods("GET")
+	adminRouter.HandleFunc("/upload", uploadHandler).Methods("POST")
+	adminRouter.HandleFunc("/orders/{id}/status", orderStatusHandler).Methods("POST")
+
+	// Admin: Users
+	adminRouter.HandleFunc("/users", auth.ListUsersHandler).Methods("GET")
+	adminRouter.HandleFunc("/users", auth.CreateUserHandler).Methods("POST")
+	adminRouter.HandleFunc("/users/{id}", auth.UpdateUserHandler).Methods("PUT")
+	adminRouter.HandleFunc("/users/{id}", auth.DeleteUserHandler).Methods("DELETE")
+
+	// Admin: Organizations
+	adminRouter.HandleFunc("/organizations", listOrganizationsHandler).Methods("GET")
+	adminRouter.HandleFunc("/organizations", createOrganizationHandler).Methods("POST")
+	adminRouter.HandleFunc("/organizations/{id}", getOrganizationHandler).Methods("GET")
+	adminRouter.HandleFunc("/organizations/{id}", updateOrganizationHandler).Methods("PUT")
+	adminRouter.HandleFunc("/organizations/{id}", deleteOrganizationHandler).Methods("DELETE")
+
+	// Admin: Nested Resources
+	adminRouter.HandleFunc("/organizations/{org_id}/products", listProductsHandler).Methods("GET")
+	adminRouter.HandleFunc("/organizations/{org_id}/products", createProductHandler).Methods("POST")
+	adminRouter.HandleFunc("/organizations/{org_id}/campaigns", listCampaignsHandler).Methods("GET")
+	adminRouter.HandleFunc("/organizations/{org_id}/campaigns", createCampaignHandler).Methods("POST")
+
+	// Admin: Product Modification (Global/Direct)
+	adminRouter.HandleFunc("/products", createProductHandler).Methods("POST")
+	adminRouter.HandleFunc("/products/{id}", getProductHandler).Methods("GET")
+	adminRouter.HandleFunc("/products/{id}", updateProductHandler).Methods("PUT")
+	adminRouter.HandleFunc("/products/{id}", deleteProductHandler).Methods("DELETE")
+
+	// Admin: Campaign Modification (Global/Direct)
+	adminRouter.HandleFunc("/campaigns", createCampaignHandler).Methods("POST")
+	// getCampaignHandler is public above
+	adminRouter.HandleFunc("/campaigns/{id}", updateCampaignHandler).Methods("PUT")
+	adminRouter.HandleFunc("/campaigns/{id}", deleteCampaignHandler).Methods("DELETE")
+	adminRouter.HandleFunc("/campaigns/{id}/products", addCampaignProductHandler).Methods("POST")
+	adminRouter.HandleFunc("/campaigns/{id}/products/{product_id}", removeCampaignProductHandler).Methods("DELETE")
 
 	// SPA Handler (Serve React App)
 	// 1. Serve static assets directly

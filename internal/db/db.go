@@ -56,6 +56,17 @@ func InitDB(dataSourceName string) error {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
 
+	createUsersTable := `
+	CREATE TABLE IF NOT EXISTS users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		email TEXT UNIQUE NOT NULL,
+		password_hash TEXT NOT NULL,
+		role TEXT NOT NULL DEFAULT 'org_admin',
+		organization_id INTEGER,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE SET NULL
+	);`
+
 	createProductsTable := `
 	CREATE TABLE IF NOT EXISTS products (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,6 +114,10 @@ func InitDB(dataSourceName string) error {
 
 	if _, err := DB.Exec(createOrganizationsTable); err != nil {
 		return fmt.Errorf("failed to create organizations table: %w", err)
+	}
+
+	if _, err := DB.Exec(createUsersTable); err != nil {
+		return fmt.Errorf("failed to create users table: %w", err)
 	}
 	if _, err := DB.Exec(createProductsTable); err != nil {
 		return fmt.Errorf("failed to create products table: %w", err)
@@ -196,6 +211,15 @@ type DBOrder struct {
 type DBOrderItem struct {
 	PlantType string
 	Quantity  int
+}
+
+type DBUser struct {
+	ID             int64     `json:"id"`
+	Email          string    `json:"email"`
+	PasswordHash   string    `json:"-"` // Never expose password hash
+	Role           string    `json:"role"`
+	OrganizationID *int64    `json:"org_id"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type Organization struct {

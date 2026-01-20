@@ -34,3 +34,4 @@ tmp/
 
 # Dynamic data
 *.db
+.DS_Store

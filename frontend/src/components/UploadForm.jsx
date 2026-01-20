@@ -103,13 +103,14 @@ export default function UploadForm({ onUploadSuccess, campaigns = [] }) {
 
                 {campaigns.length > 0 && (
                     <div className="mt-4">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Assign to Campaign</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Assign to Campaign <span className="text-red-500">*</span></label>
                         <select
+                            required
                             value={selectedCampaignId}
                             onChange={e => setSelectedCampaignId(e.target.value)}
                             className="w-full rounded-lg border-slate-300 text-sm focus:border-primary-500 focus:ring-primary-500"
                         >
-                            <option value="">-- Select Campaign (Optional) --</option>
+                            <option value="">-- Select Campaign --</option>
                             {campaigns.map(c => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
                             ))}

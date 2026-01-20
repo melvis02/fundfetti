@@ -150,7 +150,7 @@ export default function Organizations() {
                                             <button onClick={() => setEditingOrg(org)} className="text-slate-500 hover:text-slate-800 text-sm font-medium">Edit</button>
                                             <button onClick={() => handleDelete(org.id)} className="text-red-500 hover:text-red-800 text-sm font-medium">Delete</button>
                                             <Link
-                                                to={`/organizations/${org.id}`}
+                                                to={`/admin/organizations/${org.id}`}
                                                 className="text-primary-600 hover:text-primary-900 font-medium text-sm"
                                             >
                                                 Manage →
