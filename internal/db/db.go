@@ -33,9 +33,7 @@ func Rebind(query string) string {
 			result.WriteRune(char)
 		}
 	}
-	res := result.String()
-	log.Printf("[DEBUG] Rebind: %s -> %s", query, res)
-	return res
+	return result.String()
 }
 
 func InitDB(driverName, dataSourceName string) error {
