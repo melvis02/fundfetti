@@ -11,7 +11,21 @@ import (
 )
 
 func main() {
-	if err := db.InitDB("orders.db"); err != nil {
+	dbDriver := os.Getenv("DB_DRIVER")
+	if dbDriver == "" {
+		dbDriver = "sqlite"
+	}
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		if dbDriver == "sqlite" {
+			dbURL = "orders.db"
+		} else {
+			log.Fatal("DATABASE_URL is required")
+		}
+	}
+
+	if err := db.InitDB(dbDriver, dbURL); err != nil {
 		log.Fatalf("Failed to init db: %v", err)
 	}
 
