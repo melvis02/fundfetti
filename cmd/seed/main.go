@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/melvis02/fundfetti/internal/auth"
 	"github.com/melvis02/fundfetti/internal/db"
@@ -14,8 +15,13 @@ func main() {
 		log.Fatalf("Failed to init db: %v", err)
 	}
 
-	email := "admin@fundfetti.com"
-	password := "admin123"
+	email := os.Getenv("SEED_EMAIL")
+	password := os.Getenv("SEED_PASSWORD")
+
+	if email == "" || password == "" {
+		log.Fatal("SEED_EMAIL and SEED_PASSWORD environment variables are required")
+	}
+
 	role := "global_admin"
 
 	// Check if user exists
