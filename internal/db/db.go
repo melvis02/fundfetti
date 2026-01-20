@@ -220,13 +220,21 @@ func UpsertOrder(order ordersheets.Order) error {
 
 	if err == sql.ErrNoRows {
 		// New order
-		res, err := tx.Exec(Rebind("INSERT INTO orders (name, email, phone, campaign_id) VALUES (?, ?, ?, ?)"), order.Name, order.Email, order.PhoneNumber, order.CampaignID)
-		if err != nil {
-			return fmt.Errorf("failed to insert order: %w", err)
-		}
-		orderID, err = res.LastInsertId()
-		if err != nil {
-			return fmt.Errorf("failed to get last insert id: %w", err)
+		insertQuery := "INSERT INTO orders (name, email, phone, campaign_id) VALUES (?, ?, ?, ?)"
+		if currentDriver == "postgres" {
+			err := tx.QueryRow(Rebind(insertQuery+" RETURNING id"), order.Name, order.Email, order.PhoneNumber, order.CampaignID).Scan(&orderID)
+			if err != nil {
+				return fmt.Errorf("failed to insert order: %w", err)
+			}
+		} else {
+			res, err := tx.Exec(insertQuery, order.Name, order.Email, order.PhoneNumber, order.CampaignID)
+			if err != nil {
+				return fmt.Errorf("failed to insert order: %w", err)
+			}
+			orderID, err = res.LastInsertId()
+			if err != nil {
+				return fmt.Errorf("failed to get last insert id: %w", err)
+			}
 		}
 	} else {
 		// Existing order - update phone if needed, but DO NOT overwrite picked_up/paid
