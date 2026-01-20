@@ -6,13 +6,18 @@ import (
 )
 
 func CreateCampaign(c Campaign) (int64, error) {
-	stmt, err := DB.Prepare("INSERT INTO campaigns (organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-	if err != nil {
-		return 0, fmt.Errorf("failed to prepare insert campaign stmt: %w", err)
-	}
-	defer stmt.Close()
+	query := "INSERT INTO campaigns (organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
-	res, err := stmt.Exec(c.OrganizationID, c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.IsActive)
+	if currentDriver == "postgres" {
+		var id int64
+		err := DB.QueryRow(Rebind(query+" RETURNING id"), c.OrganizationID, c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.IsActive).Scan(&id)
+		if err != nil {
+			return 0, fmt.Errorf("failed to insert campaign: %w", err)
+		}
+		return id, nil
+	}
+
+	res, err := DB.Exec(query, c.OrganizationID, c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.IsActive)
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute insert campaign: %w", err)
 	}
@@ -22,7 +27,7 @@ func CreateCampaign(c Campaign) (int64, error) {
 
 func GetCampaign(id int64) (*Campaign, error) {
 	var c Campaign
-	err := DB.QueryRow("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE id = ?", id).
+	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE id = ?"), id).
 		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -42,7 +47,7 @@ func GetCampaign(id int64) (*Campaign, error) {
 }
 
 func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
-	rows, err := DB.Query("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE organization_id = ? ORDER BY start_date DESC", orgID)
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE organization_id = ? ORDER BY start_date DESC"), orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query campaigns: %w", err)
 	}
@@ -61,7 +66,7 @@ func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
 
 // Deprecated: Use GetOrganizationCampaigns
 func GetAllCampaigns() ([]Campaign, error) {
-	rows, err := DB.Query("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns ORDER BY start_date DESC")
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns ORDER BY start_date DESC"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query campaigns: %w", err)
 	}
@@ -79,33 +84,24 @@ func GetAllCampaigns() ([]Campaign, error) {
 }
 
 func UpdateCampaign(c Campaign) error {
-	stmt, err := DB.Prepare("UPDATE campaigns SET name = ?, description = ?, start_date = ?, end_date = ?, payment_metadata = ?, instructions = ?, is_active = ? WHERE id = ?")
-	if err != nil {
-		return fmt.Errorf("failed to prepare update campaign stmt: %w", err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.IsActive, c.ID)
-	if err != nil {
-		return fmt.Errorf("failed to execute update campaign: %w", err)
-	}
-	return nil
+	_, err := DB.Exec(Rebind("UPDATE campaigns SET name = ?, description = ?, start_date = ?, end_date = ?, payment_metadata = ?, instructions = ?, is_active = ? WHERE id = ?"), c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.IsActive, c.ID)
+	return err
 }
 
 func DeleteCampaign(id int64) error {
-	_, err := DB.Exec("DELETE FROM campaigns WHERE id = ?", id)
+	_, err := DB.Exec(Rebind("DELETE FROM campaigns WHERE id = ?"), id)
 	return err
 }
 
 // Campaign Product Relationship Management
 
 func AddProductToCampaign(campaignID, productID int64) error {
-	_, err := DB.Exec("INSERT OR IGNORE INTO campaign_products (campaign_id, product_id) VALUES (?, ?)", campaignID, productID)
+	_, err := DB.Exec(Rebind("INSERT INTO campaign_products (campaign_id, product_id) VALUES (?, ?) ON CONFLICT DO NOTHING"), campaignID, productID)
 	return err
 }
 
 func RemoveProductFromCampaign(campaignID, productID int64) error {
-	_, err := DB.Exec("DELETE FROM campaign_products WHERE campaign_id = ? AND product_id = ?", campaignID, productID)
+	_, err := DB.Exec(Rebind("DELETE FROM campaign_products WHERE campaign_id = ? AND product_id = ?"), campaignID, productID)
 	return err
 }
 
@@ -117,7 +113,7 @@ func GetCampaignProducts(campaignID int64) ([]Product, error) {
 		WHERE cp.campaign_id = ?
 		ORDER BY p.name ASC
 	`
-	rows, err := DB.Query(query, campaignID)
+	rows, err := DB.Query(Rebind(query), campaignID)
 	if err != nil {
 		return nil, err
 	}

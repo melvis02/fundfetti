@@ -7,7 +7,20 @@ import (
 // CreateUser creates a new user.
 // Note: Password must be hashed before passing here.
 func CreateUser(email, passwordHash, role string, orgID *int64) (int64, error) {
-	res, err := DB.Exec(Rebind("INSERT INTO users (email, password_hash, role, organization_id) VALUES (?, ?, ?, ?)"), email, passwordHash, role, orgID)
+	query := "INSERT INTO users (email, password_hash, role, organization_id) VALUES (?, ?, ?, ?)"
+
+	if currentDriver == "postgres" {
+		var id int64
+		// Postgres: Use RETURNING id
+		err := DB.QueryRow(Rebind(query+" RETURNING id"), email, passwordHash, role, orgID).Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+		return id, nil
+	}
+
+	// SQLite: Use LastInsertId
+	res, err := DB.Exec(query, email, passwordHash, role, orgID)
 	if err != nil {
 		return 0, err
 	}
