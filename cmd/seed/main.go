@@ -45,7 +45,7 @@ func main() {
 		// Update password logic could go here, but for now just skip or maybe delete/recreate
 		// Since we didn't implement UpdateUser, let's just log it.
 		hash, _ := auth.HashPassword(password)
-		_, err := db.DB.Exec("UPDATE users SET password_hash = ? WHERE id = ?", hash, existing.ID)
+		_, err := db.DB.Exec(db.Rebind("UPDATE users SET password_hash = ? WHERE id = ?"), hash, existing.ID)
 		if err != nil {
 			log.Fatalf("Failed to update password: %v", err)
 		}
