@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import UserManagement from '../components/UserManagement';
+import { useAuth } from '../context/AuthContext';
 
 export default function OrganizationDashboard() {
     const { id } = useParams();
+    const { user } = useAuth();
     const [org, setOrg] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('campaigns');
@@ -17,17 +20,6 @@ export default function OrganizationDashboard() {
     const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '' });
     const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0 });
 
-    useEffect(() => {
-        fetchOrgDetails();
-    }, [id]);
-
-    useEffect(() => {
-        if (org) {
-            if (activeTab === 'campaigns') fetchCampaigns();
-            if (activeTab === 'products') fetchProducts();
-        }
-    }, [org, activeTab]);
-
     const fetchOrgDetails = async () => {
         try {
             const data = await api.getOrganization(id);
@@ -38,6 +30,10 @@ export default function OrganizationDashboard() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchOrgDetails();
+    }, [id]);
 
     const fetchCampaigns = async () => {
         setSubLoading(true);
@@ -66,8 +62,6 @@ export default function OrganizationDashboard() {
     const handleCreateCampaign = async (e) => {
         e.preventDefault();
         try {
-            // Fix dates to RFC3339 if needed, for now sending as string, backend expects standard time.Time parsing
-            // Assuming HTML date input sends 'YYYY-MM-DD', we might need to append time
             const payload = {
                 ...newCampaign,
                 start_date: new Date(newCampaign.start_date).toISOString(),
@@ -86,7 +80,6 @@ export default function OrganizationDashboard() {
     const handleCreateProduct = async (e) => {
         e.preventDefault();
         try {
-            // Price input is probably dollars, backend wants cents
             const payload = {
                 ...newProduct,
                 price_cents: Math.round(parseFloat(newProduct.price_cents) * 100)
@@ -106,22 +99,18 @@ export default function OrganizationDashboard() {
         if (!selectedCampaign) return;
         try {
             if (isLinked) {
-                // Link
                 await api.addCampaignProduct(selectedCampaign.id, productId);
-                // deeply update selectedCampaign.products
                 setSelectedCampaign(prev => ({
                     ...prev,
                     products: [...(prev.products || []), { id: productId }]
                 }));
             } else {
-                // Unlink
                 await api.removeCampaignProduct(selectedCampaign.id, productId);
                 setSelectedCampaign(prev => ({
                     ...prev,
                     products: (prev.products || []).filter(p => p.id !== productId)
                 }));
             }
-            // Refresh campaigns list in background
             fetchCampaigns();
         } catch (e) {
             console.error(e);
@@ -130,7 +119,6 @@ export default function OrganizationDashboard() {
     };
 
     const openManageProducts = (campaign) => {
-        // We need to ensure we have the list of all products to choose from
         if (products.length === 0) fetchProducts();
         setSelectedCampaign(campaign);
     };
@@ -142,7 +130,6 @@ export default function OrganizationDashboard() {
         try {
             const payload = {
                 ...editingCampaign,
-                // ensure dates remain in correct format if touched (editingCampaign has state from input)
                 start_date: new Date(editingCampaign.start_date).toISOString(),
                 end_date: new Date(editingCampaign.end_date).toISOString(),
             };
@@ -167,13 +154,79 @@ export default function OrganizationDashboard() {
     };
 
     const openEditCampaign = (c) => {
-        // Format dates for input[type="date"] (YYYY-MM-DD)
         setEditingCampaign({
             ...c,
             start_date: new Date(c.start_date).toISOString().split('T')[0],
             end_date: new Date(c.end_date).toISOString().split('T')[0]
         });
     };
+
+    const [orders, setOrders] = useState([]);
+    const [orderFilter, setOrderFilter] = useState('all'); // all, pending_pickup, unpaid
+    const [searchQuery, setSearchQuery] = useState('');
+    const [campaignFilter, setCampaignFilter] = useState('all');
+
+    useEffect(() => {
+        if (org) {
+            if (activeTab === 'campaigns') fetchCampaigns();
+            if (activeTab === 'products') fetchProducts();
+            if (activeTab === 'orders') fetchOrders();
+        }
+    }, [org, activeTab]);
+
+    const fetchOrders = async () => {
+        setSubLoading(true);
+        try {
+            const data = await api.getOrgOrders(id);
+            setOrders(data || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSubLoading(false);
+        }
+    };
+
+    const toggleOrderStatus = async (order, field) => {
+        // field is 'picked_up' or 'paid' (API expects snake_case)
+        // order object uses PascalCase (PickedUp, Paid) from Go backend
+        const propName = field === 'picked_up' ? 'PickedUp' : 'Paid';
+        const newVal = !order[propName];
+
+        const payload = {
+            picked_up: field === 'picked_up' ? newVal : order.PickedUp,
+            paid: field === 'paid' ? newVal : order.Paid
+        };
+
+        try {
+            await api.updateOrderStatus(order.ID, payload);
+            // Optimistic update
+            setOrders(prev => prev.map(o => o.ID === order.ID ? { ...o, [propName]: newVal } : o));
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update status");
+        }
+    };
+
+    const filteredOrders = orders.filter(o => {
+        // Text Search
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            const matchesName = o.Name?.toLowerCase().includes(q);
+            const matchesEmail = o.Email?.toLowerCase().includes(q);
+            const matchesId = o.ID?.toString().includes(q);
+            if (!matchesName && !matchesEmail && !matchesId) return false;
+        }
+
+        // Campaign Filter
+        if (campaignFilter !== 'all') {
+            if (o.CampaignID !== parseInt(campaignFilter)) return false;
+        }
+
+        // Status Filter
+        if (orderFilter === 'pending_pickup') return !o.PickedUp;
+        if (orderFilter === 'unpaid') return !o.Paid;
+        return true;
+    });
 
     if (loading) return <div className="p-8 text-center">Loading Organization...</div>;
     if (!org) return <div className="p-8 text-center text-red-600">Organization not found</div>;
@@ -188,7 +241,7 @@ export default function OrganizationDashboard() {
                             <h1 className="text-2xl font-bold tracking-tight text-slate-900">{org.name}</h1>
                             <div className="text-sm text-slate-500 mt-1">Dashboard • {org.contact_email}</div>
                         </div>
-                        <Link to="/organizations" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                        <Link to="/admin/organizations" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
                             ← All Organizations
                         </Link>
                     </div>
@@ -217,6 +270,24 @@ export default function OrganizationDashboard() {
                         >
                             Products
                         </button>
+                        <button
+                            onClick={() => setActiveTab('orders')}
+                            className={`${activeTab === 'orders'
+                                ? 'border-primary-500 text-primary-600'
+                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                        >
+                            Orders
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('users')}
+                            className={`${activeTab === 'users'
+                                ? 'border-primary-500 text-primary-600'
+                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                        >
+                            Users
+                        </button>
                     </nav>
                 </div>
 
@@ -224,24 +295,26 @@ export default function OrganizationDashboard() {
                 {activeTab === 'campaigns' && (
                     <div>
                         {/* Create Campaign */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-                            <h3 className="text-lg font-semibold text-slate-800 mb-4">Launch New Campaign</h3>
-                            <form onSubmit={handleCreateCampaign} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                                    <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.name} onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })} placeholder="Spring Sale" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-                                    <input type="date" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.start_date} onChange={e => setNewCampaign({ ...newCampaign, start_date: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
-                                    <input type="date" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.end_date} onChange={e => setNewCampaign({ ...newCampaign, end_date: e.target.value })} />
-                                </div>
-                                <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Create Campaign</button>
-                            </form>
-                        </div>
+                        {user?.role !== 'reader' && (
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                                <h3 className="text-lg font-semibold text-slate-800 mb-4">Launch New Campaign</h3>
+                                <form onSubmit={handleCreateCampaign} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                                        <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.name} onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })} placeholder="Spring Sale" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                                        <input type="date" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.start_date} onChange={e => setNewCampaign({ ...newCampaign, start_date: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+                                        <input type="date" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.end_date} onChange={e => setNewCampaign({ ...newCampaign, end_date: e.target.value })} />
+                                    </div>
+                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Create Campaign</button>
+                                </form>
+                            </div>
+                        )}
 
                         {/* Campaign List */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -268,10 +341,16 @@ export default function OrganizationDashboard() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2 text-sm font-medium pt-2 border-t border-slate-50">
-                                        <button onClick={() => openManageProducts(c)} className="text-primary-600 hover:text-primary-700 flex-1 text-left">Manage Products</button>
+                                        {user?.role !== 'reader' && (
+                                            <button onClick={() => openManageProducts(c)} className="text-primary-600 hover:text-primary-700 flex-1 text-left">Manage Products</button>
+                                        )}
                                         <Link to={`/c/${c.id}`} target="_blank" className="text-slate-500 hover:text-slate-700 mr-2">View</Link>
-                                        <button onClick={() => openEditCampaign(c)} className="text-slate-400 hover:text-slate-600">✎</button>
-                                        <button onClick={() => handleDeleteCampaign(c.id)} className="text-red-300 hover:text-red-500 ml-1">🗑</button>
+                                        {user?.role !== 'reader' && (
+                                            <>
+                                                <button onClick={() => openEditCampaign(c)} className="text-slate-400 hover:text-slate-600">✎</button>
+                                                <button onClick={() => handleDeleteCampaign(c.id)} className="text-red-300 hover:text-red-500 ml-1">🗑</button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -287,20 +366,22 @@ export default function OrganizationDashboard() {
                 {activeTab === 'products' && (
                     <div>
                         {/* Create Product */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-                            <h3 className="text-lg font-semibold text-slate-800 mb-4">Add Product</h3>
-                            <form onSubmit={handleCreateProduct} className="flex gap-4 items-end">
-                                <div className="flex-1">
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                                    <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Potted Tulip" />
-                                </div>
-                                <div className="w-32">
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Price ($)</label>
-                                    <input type="number" step="0.01" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.price_cents} onChange={e => setNewProduct({ ...newProduct, price_cents: e.target.value })} placeholder="10.00" />
-                                </div>
-                                <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Add Product</button>
-                            </form>
-                        </div>
+                        {user?.role !== 'reader' && (
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                                <h3 className="text-lg font-semibold text-slate-800 mb-4">Add Product</h3>
+                                <form onSubmit={handleCreateProduct} className="flex gap-4 items-end">
+                                    <div className="flex-1">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                                        <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Potted Tulip" />
+                                    </div>
+                                    <div className="w-32">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Price ($)</label>
+                                        <input type="number" step="0.01" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.price_cents} onChange={e => setNewProduct({ ...newProduct, price_cents: e.target.value })} placeholder="10.00" />
+                                    </div>
+                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Add Product</button>
+                                </form>
+                            </div>
+                        )}
 
                         {/* Product List */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -320,7 +401,9 @@ export default function OrganizationDashboard() {
                                             <td className="px-6 py-4 text-sm text-slate-600">${(p.price_cents / 100).toFixed(2)}</td>
                                             <td className="px-6 py-4 text-sm text-slate-600">{p.stock_quantity === -1 ? 'Unlimited' : p.stock_quantity}</td>
                                             <td className="px-6 py-4 text-sm text-right">
-                                                <button onClick={() => api.deleteProduct(p.id).then(fetchProducts)} className="text-red-600 hover:text-red-900">Delete</button>
+                                                {user?.role !== 'reader' && (
+                                                    <button onClick={() => api.deleteProduct(p.id).then(fetchProducts)} className="text-red-600 hover:text-red-900">Delete</button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -331,6 +414,116 @@ export default function OrganizationDashboard() {
                             </table>
                         </div>
                     </div>
+                )}
+
+                {activeTab === 'orders' && (
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center bg-slate-50 gap-4">
+                            <h3 className="font-semibold text-slate-700">Order Management</h3>
+                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Search orders..."
+                                        className="pl-8 pr-4 py-1.5 text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full sm:w-64"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                    <svg className="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <select
+                                    className="text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    value={campaignFilter}
+                                    onChange={(e) => setCampaignFilter(e.target.value)}
+                                >
+                                    <option value="all">All Campaigns</option>
+                                    {campaigns.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    className="text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    value={orderFilter}
+                                    onChange={(e) => setOrderFilter(e.target.value)}
+                                >
+                                    <option value="all">Any Status</option>
+                                    <option value="pending_pickup">Pending Pickup</option>
+                                    <option value="unpaid">Unpaid</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-slate-100">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">ID</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Customer</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Items</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
+                                        <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredOrders.length === 0 ? (
+                                        <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-500">No orders found.</td></tr>
+                                    ) : (
+                                        filteredOrders.map(order => (
+                                            <tr key={order.ID} className="hover:bg-slate-50">
+                                                <td className="px-6 py-4 text-sm text-slate-500">#{order.ID}</td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <div className="font-medium text-slate-900">{order.Name}</div>
+                                                    <div className="text-slate-500 text-xs">{order.Email}</div>
+                                                    {order.Phone && <div className="text-slate-500 text-xs">{order.Phone}</div>}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {order.Items && order.Items.length > 0 ? (
+                                                        <ul className="list-disc list-inside text-xs">
+                                                            {order.Items.map((item, idx) => (
+                                                                <li key={idx}>{item.Quantity}x {item.PlantType}</li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <span className="text-slate-400 italic">No items</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <div className="flex flex-col gap-2">
+                                                        <button
+                                                            onClick={user?.role !== 'reader' ? () => toggleOrderStatus(order, 'paid') : undefined}
+                                                            disabled={user?.role === 'reader'}
+                                                            className={`text-xs px-2 py-1 rounded-full border transition-colors ${order.Paid
+                                                                ? 'bg-green-100 text-green-700 border-green-200'
+                                                                : 'bg-red-50 text-red-600 border-red-100'} ${user?.role !== 'reader' ? 'hover:bg-green-200 hover:bg-red-100 cursor-pointer' : 'cursor-default opacity-80'}`}
+                                                        >
+                                                            {order.Paid ? 'Paid' : 'Unpaid'}
+                                                        </button>
+                                                        <button
+                                                            onClick={user?.role !== 'reader' ? () => toggleOrderStatus(order, 'picked_up') : undefined}
+                                                            disabled={user?.role === 'reader'}
+                                                            className={`text-xs px-2 py-1 rounded-full border transition-colors ${order.PickedUp
+                                                                ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                                                : 'bg-amber-50 text-amber-600 border-amber-100'} ${user?.role !== 'reader' ? 'hover:bg-blue-200 hover:bg-amber-100 cursor-pointer' : 'cursor-default opacity-80'}`}
+                                                        >
+                                                            {order.PickedUp ? ' picked up' : 'Pending Pickup'}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-right">
+
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'users' && (
+                    <UserManagement orgId={parseInt(id)} />
                 )}
             </div>
 

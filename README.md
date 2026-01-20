@@ -49,11 +49,10 @@ High-performance order processing system for non-profit fundraisers. Originally 
 - [x] Multi-Tenancy (Organizations)
 - [x] Admin Dashboard
 - [x] Public Ordering Flow
-- [ ] Separate Admin & Public User Interfaces
-- [ ] Site-wide Organization Selection
-- [ ] Vanity URLs for Organizations & Campaigns
-- [ ] Migrate the Orders Management interface to the Admin Dashboard
-- [ ] Filtering on Orders Dashboard
+- [x] Separate Admin & Public User Interfaces
+- [x] Site-wide Organization Selection
+- [x] Migrate the Orders Management interface to the Admin Dashboard
+- [x] Filtering on Orders Dashboard
 - [ ] Authentication & Authorization
 - [ ] User Management
 - [ ] Basic RBAC for Admins (Global Administrator, Organization Administrator, Campaign Administrator, Reader)

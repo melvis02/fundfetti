@@ -103,6 +103,20 @@ export const api = {
         if (!res.ok) throw new Error('Failed to fetch campaign');
         return res.json();
     },
+    getOrgOrders: async (orgId) => {
+        const res = await fetch(`${API_BASE}/orders?org_id=${orgId}`);
+        if (!res.ok) throw new Error('Failed to fetch orders');
+        return res.json();
+    },
+    updateOrderStatus: async (id, status) => {
+        const res = await fetch(`${API_BASE}/orders/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(status),
+        });
+        if (!res.ok) throw new Error('Failed to update order status');
+        return res.json();
+    },
     submitOrder: async (order) => {
         const res = await fetch(`${API_BASE}/orders`, {
             method: 'POST',
@@ -111,5 +125,36 @@ export const api = {
         });
         if (!res.ok) throw new Error('Failed to submit order');
         return res.json();
+    },
+
+    // Users
+    getUsers: async (orgId = null) => {
+        let url = `${API_BASE}/users`;
+        if (orgId) url += `?org_id=${orgId}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch users');
+        return res.json();
+    },
+    createUser: async (user) => {
+        const res = await fetch(`${API_BASE}/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(user),
+        });
+        if (!res.ok) throw new Error('Failed to create user');
+        return res.json();
+    },
+    updateUser: async (id, user) => {
+        const res = await fetch(`${API_BASE}/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(user),
+        });
+        if (!res.ok) throw new Error('Failed to update user');
+        return res.json();
+    },
+    deleteUser: async (id) => {
+        const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete user');
     }
 };
