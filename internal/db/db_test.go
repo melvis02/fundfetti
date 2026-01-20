@@ -9,7 +9,7 @@ import (
 
 func TestPhase1Integration(t *testing.T) {
 	// 1. Init DB in memory
-	if err := InitDB(":memory:"); err != nil {
+	if err := InitDB("sqlite", ":memory:"); err != nil {
 		t.Fatalf("Failed to init DB: %v", err)
 	}
 
@@ -94,7 +94,7 @@ func TestPhase1Integration(t *testing.T) {
 
 func TestPhase1_5_OrganizationIntegration(t *testing.T) {
 	// 1. Init DB in memory
-	if err := InitDB(":memory:"); err != nil {
+	if err := InitDB("sqlite", ":memory:"); err != nil {
 		t.Fatalf("Failed to init DB: %v", err)
 	}
 

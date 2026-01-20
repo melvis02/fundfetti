@@ -4,17 +4,19 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/melvis02/fundfetti/internal/ordersheets"
 	_ "modernc.org/sqlite"
 )
 
 var DB *sql.DB
 
-func InitDB(dataSourceName string) error {
+func InitDB(driverName, dataSourceName string) error {
 	var err error
-	DB, err = sql.Open("sqlite", dataSourceName)
+	DB, err = sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
@@ -23,53 +25,59 @@ func InitDB(dataSourceName string) error {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 
+	// Dialect helpers
+	primaryKeyDef := "INTEGER PRIMARY KEY AUTOINCREMENT"
+	if driverName == "postgres" {
+		primaryKeyDef = "SERIAL PRIMARY KEY"
+	}
+
 	// Existing Tables
-	createOrdersTable := `
+	createOrdersTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS orders (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id %s,
 		name TEXT,
 		email TEXT,
 		phone TEXT,
-		picked_up BOOLEAN DEFAULT 0,
-		paid BOOLEAN DEFAULT 0,
+		picked_up BOOLEAN DEFAULT FALSE,
+		paid BOOLEAN DEFAULT FALSE,
 		campaign_id INTEGER,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		UNIQUE(name, email)
-	);`
+	);`, primaryKeyDef)
 
-	createOrderItemsTable := `
+	createOrderItemsTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS order_items (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id %s,
 		order_id INTEGER,
 		plant_type TEXT,
 		quantity INTEGER,
 		FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
-	);`
+	);`, primaryKeyDef)
 
 	// New Tables for Features
-	createOrganizationsTable := `
+	createOrganizationsTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS organizations (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id %s,
 		name TEXT NOT NULL,
 		slug TEXT NOT NULL UNIQUE,
 		contact_email TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);`
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`, primaryKeyDef)
 
-	createUsersTable := `
+	createUsersTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS users (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id %s,
 		email TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
 		role TEXT NOT NULL DEFAULT 'org_admin',
 		organization_id INTEGER,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE SET NULL
-	);`
+	);`, primaryKeyDef)
 
-	createProductsTable := `
+	createProductsTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS products (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id %s,
 		organization_id INTEGER,
 		name TEXT NOT NULL,
 		description TEXT,
@@ -77,21 +85,21 @@ func InitDB(dataSourceName string) error {
 		image_url TEXT,
 		stock_quantity INTEGER DEFAULT -1,
 		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE
-	);`
+	);`, primaryKeyDef)
 
-	createCampaignsTable := `
+	createCampaignsTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS campaigns (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id %s,
 		organization_id INTEGER,
 		name TEXT NOT NULL,
 		description TEXT,
-		start_date DATETIME,
-		end_date DATETIME,
+		start_date TIMESTAMP,
+		end_date TIMESTAMP,
 		payment_metadata TEXT,
 		instructions TEXT,
-		is_active BOOLEAN DEFAULT 1,
+		is_active BOOLEAN DEFAULT TRUE,
 		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE
-	);`
+	);`, primaryKeyDef)
 
 	createCampaignProductsTable := `
 	CREATE TABLE IF NOT EXISTS campaign_products (
@@ -102,40 +110,73 @@ func InitDB(dataSourceName string) error {
 		FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 	);`
 
-	if _, err := DB.Exec(createOrdersTable); err != nil {
-		return fmt.Errorf("failed to create orders table: %w", err)
-	}
-	// Migration: Add campaign_id if it doesn't exist (simplistic migration)
-	DB.Exec("ALTER TABLE orders ADD COLUMN campaign_id INTEGER;")
-
-	if _, err := DB.Exec(createOrderItemsTable); err != nil {
-		return fmt.Errorf("failed to create order_items table: %w", err)
-	}
-
-	if _, err := DB.Exec(createOrganizationsTable); err != nil {
-		return fmt.Errorf("failed to create organizations table: %w", err)
+	queries := []string{
+		createOrdersTable,
+		createOrderItemsTable,
+		createOrganizationsTable,
+		createUsersTable,
+		createProductsTable,
+		createCampaignsTable,
+		createCampaignProductsTable,
 	}
 
-	if _, err := DB.Exec(createUsersTable); err != nil {
-		return fmt.Errorf("failed to create users table: %w", err)
-	}
-	if _, err := DB.Exec(createProductsTable); err != nil {
-		return fmt.Errorf("failed to create products table: %w", err)
-	}
-	// Migration: Add organization_id to products
-	DB.Exec("ALTER TABLE products ADD COLUMN organization_id INTEGER;")
+	for _, query := range queries {
+		// SQLite uses 0/1 for booleans, Postgres allows TRUE/FALSE constants but defaults need care
+		// Actually, standard SQL boolean works in Postgres. SQLite accepts 'TRUE'/'FALSE' usually but maps to 1/0.
+		// Let's ensure compatibility.
+		// My definitions above use `BOOLEAN DEFAULT FALSE` which is valid in generic SQL (SQLite maps to NUMERIC).
+		// Wait, SQLite `BOOLEAN` affinity is NUMERIC. `DEFAULT 0` is safer than `FALSE` for SQLite if we rely on it being 0/1.
+		// However, Postgres `BOOLEAN` is a real type. `0` might be invalid for boolean in Postgres depending on strictness.
+		// Postgres: `DEFAULT FALSE` is correct. `DEFAULT 0` is error.
+		// SQLite: `DEFAULT FALSE` works (maps to 0).
+		// So using `FALSE`/`TRUE` is actually better for cross-compat than `0`/`1`.
 
-	if _, err := DB.Exec(createCampaignsTable); err != nil {
-		return fmt.Errorf("failed to create campaigns table: %w", err)
+		if _, err := DB.Exec(query); err != nil {
+			return fmt.Errorf("failed to create table: %w \n Query: %s", err, query)
+		}
 	}
-	// Migration: Add organization_id to campaigns
-	DB.Exec("ALTER TABLE campaigns ADD COLUMN organization_id INTEGER;")
 
-	if _, err := DB.Exec(createCampaignProductsTable); err != nil {
-		return fmt.Errorf("failed to create campaign_products table: %w", err)
+	// Migrations (Idempotent operations)
+	// These are tricky cross-DB.
+	// ADD COLUMN IF NOT EXISTS is Postgres 9.6+. SQLite supports basic ADD COLUMN.
+	// Simple approach: Ignore error or check for column existence.
+	// Since this is a "migration" step for existing deployments, and I want to be safe:
+	// I will use a helper to add column safely.
+
+	ignoreErr := func(err error) {
+		if err != nil {
+			// Log but don't fail, assuming it might be "duplicate column"
+			log.Printf("Migration warning (might be already applied): %v", err)
+		}
 	}
+
+	// Orders: campaign_id
+	ignoreErr(addColumn(driverName, "orders", "campaign_id", "INTEGER"))
+
+	// Products: organization_id
+	ignoreErr(addColumn(driverName, "products", "organization_id", "INTEGER"))
+
+	// Campaigns: organization_id
+	ignoreErr(addColumn(driverName, "campaigns", "organization_id", "INTEGER"))
 
 	return nil
+}
+
+func addColumn(driver, table, column, colType string) error {
+	// Postgres requires 'ADD COLUMN', SQLite works with 'ADD' or 'ADD COLUMN'
+	// 'IF NOT EXISTS' for columns is newer.
+	query := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", table, column, colType)
+	if driver == "postgres" {
+		query = fmt.Sprintf("ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;", table, column, colType)
+	}
+	_, err := DB.Exec(query)
+	// SQLite will error if column exists. Postgres with IF NOT EXISTS won't.
+	// We handle SQLite error in the caller by ignoring it, or we could query schema.
+	// For now, ignoring error is 'okay' for this simple migration script.
+	if driver == "sqlite" && err != nil && strings.Contains(err.Error(), "duplicate column") {
+		return nil
+	}
+	return err
 }
 
 func UpsertOrder(order ordersheets.Order) error {

@@ -21,8 +21,24 @@ import (
 
 func StartServer() {
 
+	// Database Config
+	dbDriver := os.Getenv("DB_DRIVER")
+	if dbDriver == "" {
+		dbDriver = "sqlite" // default to sqlite for backward compatibility
+	}
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		if dbDriver == "sqlite" {
+			dbURL = "orders.db"
+		} else {
+			log.Fatal("DATABASE_URL environment variable is required for non-sqlite drivers")
+		}
+	}
+
 	// Initialize Database
-	if err := db.InitDB("orders.db"); err != nil {
+	log.Printf("Connecting to database (%s)...", dbDriver)
+	if err := db.InitDB(dbDriver, dbURL); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
