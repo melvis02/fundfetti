@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import UserManagement from '../components/UserManagement';
+import UploadForm from '../components/UploadForm';
 import { useAuth } from '../context/AuthContext';
 
 export default function OrganizationDashboard() {
@@ -454,6 +455,39 @@ export default function OrganizationDashboard() {
                                 </select>
                             </div>
                         </div>
+
+                        {/* Import and Print Actions */}
+                        <div className="p-4 border-b border-slate-100 bg-white grid gap-4 grid-cols-1 md:grid-cols-2">
+                            <div className="p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                                    <span>📥</span> Import Orders CSV
+                                </h4>
+                                <UploadForm onUploadSuccess={fetchOrders} campaigns={campaigns} />
+                            </div>
+                            <div className="flex flex-col justify-center gap-3">
+                                <h4 className="text-sm font-semibold text-slate-700">Print Options</h4>
+                                <div className="flex gap-3">
+                                    <a
+                                        href={`/print/summary?org_id=${id}`}
+                                        target="_blank"
+                                        className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg transition-colors font-medium border border-slate-200 text-sm"
+                                    >
+                                        <span>📄</span> Print Summary
+                                    </a>
+                                    <a
+                                        href={`/print/orders?org_id=${id}`}
+                                        target="_blank"
+                                        className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg transition-colors font-medium border border-slate-200 text-sm"
+                                    >
+                                        <span>🏷️</span> Print Labels
+                                    </a>
+                                </div>
+                                <p className="text-xs text-slate-500">
+                                    Opens a printer-friendly view in a new tab. Use browser print (Cmd+P) to save as PDF or print.
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-slate-100">
                                 <thead className="bg-slate-50">

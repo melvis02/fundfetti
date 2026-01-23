@@ -5,7 +5,11 @@ export default function PrintSheets() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('/api/orders')
+        const params = new URLSearchParams(window.location.search);
+        const orgId = params.get('org_id');
+        const endpoint = orgId ? `/api/orders?org_id=${orgId}` : '/api/orders';
+
+        fetch(endpoint)
             .then(res => res.json())
             .then(data => setOrders(data || []))
             .catch(err => console.error("Fetch failed", err))
