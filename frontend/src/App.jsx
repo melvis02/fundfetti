@@ -7,7 +7,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import PrintSummary from './components/PrintSummary';
 import PrintSheets from './components/PrintSheets';
-import Dashboard from './components/Dashboard';
 import Organizations from './pages/Organizations';
 import OrganizationDashboard from './pages/OrganizationDashboard';
 import Users from './pages/Users';
@@ -43,14 +42,14 @@ function App() {
               </AdminProvider>
             </ProtectedRoute>
           }>
-            <Route index element={<Dashboard />} />
+
             <Route path="organizations" element={<Organizations />} />
             <Route path="organizations/:id" element={<OrganizationDashboard />} />
             <Route path="users" element={<Users />} />
           </Route>
 
           {/* Redirect Root to Admin */}
-          <Route path="/" element={<Navigate to="/admin" replace />} />
+          <Route path="/" element={<Navigate to="/admin/organizations" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

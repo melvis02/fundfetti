@@ -28,7 +28,7 @@ export default function AdminLayout() {
                             </div>
                             <div className="hidden md:block">
                                 <div className="flex items-baseline space-x-4">
-                                    <Link to="/admin" className={navClass('/admin')}>Orders Dashboard</Link>
+
                                     {currentOrg && (
                                         <Link to={`/admin/organizations/${currentOrg.id}`} className={navClass(`/admin/organizations/${currentOrg.id}`)}>
                                             Current Org ({currentOrg.slug})
