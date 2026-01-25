@@ -84,3 +84,16 @@ func DeleteProduct(id int64) error {
 	_, err := DB.Exec(Rebind("DELETE FROM products WHERE id = ?"), id)
 	return err
 }
+
+func GetProductByName(orgID int64, name string) (*Product, error) {
+	var p Product
+	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, description, price_cents, image_url, stock_quantity FROM products WHERE organization_id = ? AND name = ?"), orgID, name).
+		Scan(&p.ID, &p.OrganizationID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Not found
+		}
+		return nil, fmt.Errorf("failed to get product by name: %w", err)
+	}
+	return &p, nil
+}
