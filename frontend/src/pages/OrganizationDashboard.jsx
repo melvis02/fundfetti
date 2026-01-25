@@ -20,6 +20,7 @@ export default function OrganizationDashboard() {
     // Form states
     const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '' });
     const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0 });
+    const [editingProduct, setEditingProduct] = useState(null);
 
     const fetchOrgDetails = async () => {
         try {
@@ -160,6 +161,30 @@ export default function OrganizationDashboard() {
             start_date: new Date(c.start_date).toISOString().split('T')[0],
             end_date: new Date(c.end_date).toISOString().split('T')[0]
         });
+    };
+
+    const openEditProduct = (p) => {
+        setEditingProduct({
+            ...p,
+            price_dollars: (p.price_cents / 100).toFixed(2)
+        });
+    };
+
+    const handleUpdateProduct = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                ...editingProduct,
+                price_cents: Math.round(parseFloat(editingProduct.price_dollars) * 100),
+                stock_quantity: parseInt(editingProduct.stock_quantity)
+            };
+            await api.updateProduct(editingProduct.id, payload);
+            setEditingProduct(null);
+            fetchProducts();
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update product");
+        }
     };
 
     const [orders, setOrders] = useState([]);
@@ -403,7 +428,10 @@ export default function OrganizationDashboard() {
                                             <td className="px-6 py-4 text-sm text-slate-600">{p.stock_quantity === -1 ? 'Unlimited' : p.stock_quantity}</td>
                                             <td className="px-6 py-4 text-sm text-right">
                                                 {user?.role !== 'reader' && (
-                                                    <button onClick={() => api.deleteProduct(p.id).then(fetchProducts)} className="text-red-600 hover:text-red-900">Delete</button>
+                                                    <div className="flex justify-end gap-3 font-medium">
+                                                        <button onClick={() => openEditProduct(p)} className="text-slate-400 hover:text-slate-600">✎ Edit</button>
+                                                        <button onClick={() => api.deleteProduct(p.id).then(fetchProducts)} className="text-red-300 hover:text-red-500">🗑</button>
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>
@@ -642,6 +670,43 @@ export default function OrganizationDashboard() {
                         <div className="p-6 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end">
                             <button onClick={() => setSelectedCampaign(null)} className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700">Done</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Product Edit Modal */}
+            {editingProduct && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-slate-900">Edit Product</h3>
+                            <button onClick={() => setEditingProduct(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                        </div>
+                        <form onSubmit={handleUpdateProduct} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                                <input type="text" required className="w-full rounded-lg border-slate-200" value={editingProduct.name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Price ($)</label>
+                                    <input type="number" step="0.01" required className="w-full rounded-lg border-slate-200" value={editingProduct.price_dollars} onChange={e => setEditingProduct({ ...editingProduct, price_dollars: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Stock (-1 for UNLIMITED)</label>
+                                    <input type="number" required className="w-full rounded-lg border-slate-200" value={editingProduct.stock_quantity} onChange={e => setEditingProduct({ ...editingProduct, stock_quantity: e.target.value })} />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                                <textarea className="w-full rounded-lg border-slate-200" rows="3" value={editingProduct.description || ''} onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}></textarea>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
+                                <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium">Save Changes</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

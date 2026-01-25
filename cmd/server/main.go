@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -201,10 +203,26 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		priceRegex := regexp.MustCompile(`(?i)\s*[-–—]?\s*\$(\d+(\.\d{2})?)\s*`)
+
 		for productName := range productNames {
-			p, err := db.GetProductByName(orgID, productName)
+			cleanName := productName
+			priceCents := 0
+
+			matches := priceRegex.FindStringSubmatch(productName)
+			if len(matches) > 1 {
+				priceStr := matches[1]
+				if price, err := strconv.ParseFloat(priceStr, 64); err == nil {
+					priceCents = int(price * 100)
+					cleanName = strings.TrimSpace(priceRegex.ReplaceAllString(productName, " "))
+					// Clean up any double spaces
+					cleanName = regexp.MustCompile(`\s+`).ReplaceAllString(cleanName, " ")
+				}
+			}
+
+			p, err := db.GetProductByName(orgID, cleanName)
 			if err != nil {
-				log.Printf("Error checking product %s: %v", productName, err)
+				log.Printf("Error checking product %s: %v", cleanName, err)
 				continue
 			}
 
@@ -213,18 +231,26 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 				// Create new product
 				newID, err := db.CreateProduct(db.Product{
 					OrganizationID: orgID,
-					Name:           productName,
-					PriceCents:     0, // Default to 0, user can update later
+					Name:           cleanName,
+					PriceCents:     priceCents,
 					StockQuantity:  -1,
 				})
 				if err != nil {
-					log.Printf("Failed to create product %s: %v", productName, err)
+					log.Printf("Failed to create product %s: %v", cleanName, err)
 					continue
 				}
 				productID = newID
-				log.Printf("Auto-created product: %s (ID: %d)", productName, productID)
+				log.Printf("Auto-created product: %s  at $%d.%02d (ID: %d)", cleanName, priceCents/100, priceCents%100, productID)
 			} else {
 				productID = p.ID
+				// If existing product has 0 price but we found a price in the CSV, update it?
+				// User didn't explicitly ask for update, but it's a nice touch.
+				// However, if they have an existing price, we shouldn't overwrite it unless it's 0.
+				if p.PriceCents == 0 && priceCents != 0 {
+					p.PriceCents = priceCents
+					db.UpdateProduct(*p)
+					log.Printf("Updated existing product price: %s to $%d.%02d", cleanName, priceCents/100, priceCents%100)
+				}
 			}
 
 			// Ensure product is linked to campaign
