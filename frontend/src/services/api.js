@@ -54,6 +54,15 @@ export const api = {
         const res = await fetch(`${API_BASE}/products/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Failed to delete product');
     },
+    updateProduct: async (id, product) => {
+        const res = await fetch(`${API_BASE}/products/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(product),
+        });
+        if (!res.ok) throw new Error('Failed to update product');
+        return res.json();
+    },
 
     // Campaigns (Scoped)
     getOrgCampaigns: async (orgId) => {
