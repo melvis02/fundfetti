@@ -180,9 +180,59 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	campaignIDStr := r.FormValue("campaign_id")
 	var campaignID *int64
+	var orgID int64
 	if campaignIDStr != "" {
 		if id, err := strconv.ParseInt(campaignIDStr, 10, 64); err == nil {
 			campaignID = &id
+			// Get org_id from campaign
+			campaign, err := db.GetCampaign(id)
+			if err == nil && campaign != nil {
+				orgID = campaign.OrganizationID
+			}
+		}
+	}
+
+	// Auto-create products if they don't exist
+	if orgID != 0 {
+		productNames := make(map[string]bool)
+		for _, order := range orders {
+			for _, plant := range order.OrderedPlants {
+				productNames[plant.PlantType] = true
+			}
+		}
+
+		for productName := range productNames {
+			p, err := db.GetProductByName(orgID, productName)
+			if err != nil {
+				log.Printf("Error checking product %s: %v", productName, err)
+				continue
+			}
+
+			var productID int64
+			if p == nil {
+				// Create new product
+				newID, err := db.CreateProduct(db.Product{
+					OrganizationID: orgID,
+					Name:           productName,
+					PriceCents:     0, // Default to 0, user can update later
+					StockQuantity:  -1,
+				})
+				if err != nil {
+					log.Printf("Failed to create product %s: %v", productName, err)
+					continue
+				}
+				productID = newID
+				log.Printf("Auto-created product: %s (ID: %d)", productName, productID)
+			} else {
+				productID = p.ID
+			}
+
+			// Ensure product is linked to campaign
+			if campaignID != nil {
+				if err := db.AddProductToCampaign(*campaignID, productID); err != nil {
+					log.Printf("Failed to link product %d to campaign %d: %v", productID, *campaignID, err)
+				}
+			}
 		}
 	}
 
