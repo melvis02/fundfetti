@@ -224,7 +224,8 @@ func listCampaignsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	campaigns, err := db.GetAllCampaigns()
+	// Public view: only active campaigns
+	campaigns, err := db.GetActiveCampaigns()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

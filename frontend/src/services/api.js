@@ -106,6 +106,11 @@ export const api = {
     },
 
     // Public / Ordering
+    getPublicCampaigns: async () => {
+        const res = await fetch(`${API_BASE}/campaigns`);
+        if (!res.ok) throw new Error('Failed to fetch campaigns');
+        return res.json();
+    },
     getCampaignPublic: async (id) => {
         // Using existing endpoint as it returns products too
         const res = await fetch(`${API_BASE}/campaigns/${id}`);

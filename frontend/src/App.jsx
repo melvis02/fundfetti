@@ -11,6 +11,7 @@ import Organizations from './pages/Organizations';
 import OrganizationDashboard from './pages/OrganizationDashboard';
 import Users from './pages/Users';
 import PublicCampaign from './pages/PublicCampaign';
+import PublicHome from './pages/PublicHome';
 import Login from './pages/Login';
 
 function App() {
@@ -48,8 +49,8 @@ function App() {
             <Route path="users" element={<Users />} />
           </Route>
 
-          {/* Redirect Root to Admin */}
-          <Route path="/" element={<Navigate to="/admin/organizations" replace />} />
+          {/* Public Home */}
+          <Route path="/" element={<PublicHome />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

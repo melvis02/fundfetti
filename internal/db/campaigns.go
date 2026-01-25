@@ -64,6 +64,29 @@ func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
 	return campaigns, nil
 }
 
+func GetActiveCampaigns() ([]Campaign, error) {
+	query := "SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE is_active = 1 ORDER BY start_date DESC"
+	if currentDriver == "postgres" {
+		query = "SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE is_active = true ORDER BY start_date DESC"
+	}
+
+	rows, err := DB.Query(Rebind(query))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active campaigns: %w", err)
+	}
+	defer rows.Close()
+
+	campaigns := []Campaign{}
+	for rows.Next() {
+		var c Campaign
+		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive); err != nil {
+			return nil, fmt.Errorf("failed to scan campaign: %w", err)
+		}
+		campaigns = append(campaigns, c)
+	}
+	return campaigns, nil
+}
+
 // Deprecated: Use GetOrganizationCampaigns
 func GetAllCampaigns() ([]Campaign, error) {
 	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns ORDER BY start_date DESC"))
