@@ -27,8 +27,14 @@ func CreateCampaign(c Campaign) (int64, error) {
 
 func GetCampaign(id int64) (*Campaign, error) {
 	var c Campaign
-	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE id = ?"), id).
-		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive)
+	query := `
+		SELECT c.id, c.organization_id, c.name, c.description, c.start_date, c.end_date, c.payment_metadata, c.instructions, c.is_active, o.name
+		FROM campaigns c
+		JOIN organizations o ON c.organization_id = o.id
+		WHERE c.id = ?
+	`
+	err := DB.QueryRow(Rebind(query), id).
+		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive, &c.OrganizationName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Not found
@@ -65,9 +71,21 @@ func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
 }
 
 func GetActiveCampaigns() ([]Campaign, error) {
-	query := "SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE is_active = 1 ORDER BY start_date DESC"
+	query := `
+		SELECT c.id, c.organization_id, c.name, c.description, c.start_date, c.end_date, c.payment_metadata, c.instructions, c.is_active, o.name
+		FROM campaigns c
+		JOIN organizations o ON c.organization_id = o.id
+		WHERE c.is_active = 1
+		ORDER BY c.start_date DESC
+	`
 	if currentDriver == "postgres" {
-		query = "SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE is_active = true ORDER BY start_date DESC"
+		query = `
+			SELECT c.id, c.organization_id, c.name, c.description, c.start_date, c.end_date, c.payment_metadata, c.instructions, c.is_active, o.name
+			FROM campaigns c
+			JOIN organizations o ON c.organization_id = o.id
+			WHERE c.is_active = true
+			ORDER BY c.start_date DESC
+		`
 	}
 
 	rows, err := DB.Query(Rebind(query))
@@ -79,7 +97,7 @@ func GetActiveCampaigns() ([]Campaign, error) {
 	campaigns := []Campaign{}
 	for rows.Next() {
 		var c Campaign
-		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive); err != nil {
+		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive, &c.OrganizationName); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
 		campaigns = append(campaigns, c)

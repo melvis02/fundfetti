@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api } from '../services/api';
 
 export default function PublicCampaign() {
@@ -63,13 +63,20 @@ export default function PublicCampaign() {
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    if (!campaign) return <div className="min-h-screen flex items-center justify-center">Campaign Not Found</div>;
+    if (!campaign) return <div className="min-h-screen flex items-center justify-center">Fundraiser Not Found</div>;
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
             {/* Header / Hero */}
             <div className="bg-white shadow-sm border-b border-slate-200">
-                <div className="container mx-auto px-6 py-8 text-center max-w-2xl">
+                <div className="container mx-auto px-6 py-6 text-center max-w-2xl relative">
+                    <Link to="/" className="absolute left-6 top-6 text-slate-400 hover:text-slate-600 font-medium text-sm flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                        All Fundraisers
+                    </Link>
+                    {campaign.organization_name && (
+                        <div className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-2">{campaign.organization_name}</div>
+                    )}
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">{campaign.name}</h1>
                     <p className="text-slate-500">{campaign.description || "Support our fundraiser by ordering below!"}</p>
                     {step < 4 && (
@@ -130,15 +137,15 @@ export default function PublicCampaign() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                                <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })} />
+                                <input type="text" required placeholder="Jane Doe" className="form-input w-full rounded-lg border-slate-300 focus:border-teal-500 focus:ring-teal-500" value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                                <input type="email" required className="form-input w-full rounded-lg border-slate-200" value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })} />
+                                <input type="email" required placeholder="jane@example.com" className="form-input w-full rounded-lg border-slate-300 focus:border-teal-500 focus:ring-teal-500" value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
-                                <input type="tel" required className="form-input w-full rounded-lg border-slate-200" value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })} />
+                                <input type="tel" required placeholder="(555) 123-4567" className="form-input w-full rounded-lg border-slate-300 focus:border-teal-500 focus:ring-teal-500" value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })} />
                             </div>
                         </div>
                         <div className="mt-8 flex justify-between border-t border-slate-100 pt-6">
