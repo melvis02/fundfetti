@@ -6,6 +6,7 @@ export default function PublicHome() {
     const [campaigns, setCampaigns] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedOrg, setSelectedOrg] = useState('all');
 
     useEffect(() => {
         const fetchCampaigns = async () => {
@@ -14,13 +15,18 @@ export default function PublicHome() {
                 setCampaigns(data);
             } catch (err) {
                 console.error(err);
-                setError('Failed to load campaigns.');
+                setError('Failed to load fundraisers.');
             } finally {
                 setLoading(false);
             }
         };
         fetchCampaigns();
     }, []);
+
+    const orgs = ['all', ...new Set(campaigns.map(c => c.organization_name).filter(Boolean))];
+    const filteredCampaigns = selectedOrg === 'all'
+        ? campaigns
+        : campaigns.filter(c => c.organization_name === selectedOrg);
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
@@ -36,11 +42,11 @@ export default function PublicHome() {
                         Support Local Growth
                     </h1>
                     <p className="text-lg md:text-xl text-teal-100 max-w-2xl mx-auto mb-10">
-                        Purchase beautiful plants and support your local schools, clubs, and organizations.
-                        Find an active campaign below to get started.
+                        Support your local schools, clubs, and organizations by purchasing items directly from their fundraisers.
+                        Find an active fundraiser below to get started.
                     </p>
                     <a href="#campaigns" className="inline-block bg-white text-teal-700 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-teal-50 hover:shadow-xl transition-all transform hover:-translate-y-1">
-                        Find a Campaign
+                        Find a Fundraiser
                     </a>
                 </div>
             </div>
@@ -48,7 +54,27 @@ export default function PublicHome() {
             {/* Campaign List */}
             <div id="campaigns" className="container mx-auto px-6 py-16">
                 <div className="max-w-4xl mx-auto">
-                    <h2 className="text-3xl font-bold text-slate-900 mb-8 border-l-4 border-teal-500 pl-4">Active Campaigns</h2>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+                        <h2 className="text-3xl font-bold text-slate-900 border-l-4 border-teal-500 pl-4">Active Fundraisers</h2>
+
+                        {/* Org Filter */}
+                        {orgs.length > 2 && (
+                            <div className="mt-4 md:mt-0 flex gap-2 overflow-x-auto pb-2 md:pb-0">
+                                {orgs.map(org => (
+                                    <button
+                                        key={org}
+                                        onClick={() => setSelectedOrg(org)}
+                                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedOrg === org
+                                            ? 'bg-teal-600 text-white'
+                                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {org === 'all' ? 'All' : org}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     {loading && (
                         <div className="flex justify-center py-12">
@@ -60,14 +86,17 @@ export default function PublicHome() {
                         <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">{error}</div>
                     )}
 
-                    {!loading && !error && campaigns.length === 0 && (
+                    {!loading && !error && filteredCampaigns.length === 0 && (
                         <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
-                            <p className="text-slate-500 text-lg">No active campaigns at the moment. Please check back later!</p>
+                            <p className="text-slate-500 text-lg">No active fundraisers found.</p>
+                            {selectedOrg !== 'all' && (
+                                <button onClick={() => setSelectedOrg('all')} className="text-teal-600 font-semibold mt-2 hover:underline">View All</button>
+                            )}
                         </div>
                     )}
 
                     <div className="grid gap-6 md:grid-cols-2">
-                        {campaigns.map(campaign => (
+                        {filteredCampaigns.map(campaign => (
                             <Link
                                 key={campaign.id}
                                 to={`/c/${campaign.id}`}
@@ -75,6 +104,11 @@ export default function PublicHome() {
                             >
                                 <div className="h-3 bg-gradient-to-r from-teal-400 to-emerald-400 group-hover:h-4 transition-all"></div>
                                 <div className="p-6">
+                                    {campaign.organization_name && (
+                                        <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-2">
+                                            {campaign.organization_name}
+                                        </div>
+                                    )}
                                     <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-teal-700 transition-colors">
                                         {campaign.name}
                                     </h3>

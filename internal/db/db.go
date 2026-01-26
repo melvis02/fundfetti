@@ -313,16 +313,17 @@ type Product struct {
 }
 
 type Campaign struct {
-	ID              int64     `json:"id"`
-	OrganizationID  int64     `json:"organization_id"`
-	Name            string    `json:"name"`
-	Description     string    `json:"description"`
-	StartDate       time.Time `json:"start_date"`
-	EndDate         time.Time `json:"end_date"`
-	PaymentMetadata string    `json:"payment_metadata"` // JSON string or text
-	Instructions    string    `json:"instructions"`
-	IsActive        bool      `json:"is_active"`
-	Products        []Product `json:"products,omitempty"`
+	ID               int64     `json:"id"`
+	OrganizationID   int64     `json:"organization_id"`
+	Name             string    `json:"name"`
+	Description      string    `json:"description"`
+	StartDate        time.Time `json:"start_date"`
+	EndDate          time.Time `json:"end_date"`
+	PaymentMetadata  string    `json:"payment_metadata"` // JSON string or text
+	Instructions     string    `json:"instructions"`
+	IsActive         bool      `json:"is_active"`
+	OrganizationName string    `json:"organization_name,omitempty"`
+	Products         []Product `json:"products,omitempty"`
 }
 
 func GetOrders() ([]DBOrder, error) {
