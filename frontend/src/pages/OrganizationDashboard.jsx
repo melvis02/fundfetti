@@ -18,9 +18,10 @@ export default function OrganizationDashboard() {
     const [subLoading, setSubLoading] = useState(false);
 
     // Form states
-    const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '' });
+    const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '' });
     const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0 });
     const [editingProduct, setEditingProduct] = useState(null);
+    const [editingOrg, setEditingOrg] = useState(null);
 
     const fetchOrgDetails = async () => {
         try {
@@ -71,7 +72,7 @@ export default function OrganizationDashboard() {
                 is_active: true
             };
             await api.createCampaign(id, payload);
-            setNewCampaign({ name: '', description: '', start_date: '', end_date: '' });
+            setNewCampaign({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '' });
             fetchCampaigns();
         } catch (e) {
             console.error(e);
@@ -187,6 +188,18 @@ export default function OrganizationDashboard() {
         }
     };
 
+    const handleUpdateOrganization = async (e) => {
+        e.preventDefault();
+        try {
+            await api.updateOrganization(org.id, editingOrg);
+            setOrg(editingOrg);
+            setEditingOrg(null);
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update organization");
+        }
+    };
+
     const [orders, setOrders] = useState([]);
     const [orderFilter, setOrderFilter] = useState('all'); // all, pending_pickup, unpaid
     const [searchQuery, setSearchQuery] = useState('');
@@ -264,7 +277,12 @@ export default function OrganizationDashboard() {
                 <div className="container mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{org.name}</h1>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{org.name}</h1>
+                                {user?.role !== 'reader' && (
+                                    <button onClick={() => setEditingOrg(org)} className="text-slate-400 hover:text-slate-600 text-sm">✎ Edit Details</button>
+                                )}
+                            </div>
                             <div className="text-sm text-slate-500 mt-1">Dashboard • {org.contact_email}</div>
                         </div>
                         <Link to="/admin/organizations" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
@@ -336,6 +354,10 @@ export default function OrganizationDashboard() {
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
                                         <input type="date" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.end_date} onChange={e => setNewCampaign({ ...newCampaign, end_date: e.target.value })} />
+                                    </div>
+                                    <div className="col-span-full">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Payment Instructions (Optional override)</label>
+                                        <textarea className="form-input w-full rounded-lg border-slate-200" rows="2" value={newCampaign.payment_metadata} onChange={e => setNewCampaign({ ...newCampaign, payment_metadata: e.target.value })} placeholder="Override organization payment instructions for this campaign..."></textarea>
                                     </div>
                                     <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Create Campaign</button>
                                 </form>
@@ -614,6 +636,11 @@ export default function OrganizationDashboard() {
                             </div>
 
                             <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Payment Instructions</label>
+                                <textarea className="w-full rounded-lg border-slate-200" rows="3" value={editingCampaign.payment_metadata || ''} onChange={e => setEditingCampaign({ ...editingCampaign, payment_metadata: e.target.value })} placeholder="Payment instructions..."></textarea>
+                            </div>
+
+                            <div>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -704,6 +731,40 @@ export default function OrganizationDashboard() {
 
                             <div className="flex justify-end gap-3 pt-4">
                                 <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
+                                <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Organization Edit Modal */}
+            {editingOrg && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-slate-900">Edit Organization</h3>
+                            <button onClick={() => setEditingOrg(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                        </div>
+                        <form onSubmit={handleUpdateOrganization} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Organization Name</label>
+                                <input type="text" required className="w-full rounded-lg border-slate-200" value={editingOrg.name} onChange={e => setEditingOrg({ ...editingOrg, name: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Slug (URL identifier)</label>
+                                <input type="text" required className="w-full rounded-lg border-slate-200" value={editingOrg.slug} onChange={e => setEditingOrg({ ...editingOrg, slug: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Contact Email</label>
+                                <input type="email" required className="w-full rounded-lg border-slate-200" value={editingOrg.contact_email} onChange={e => setEditingOrg({ ...editingOrg, contact_email: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Payment Instructions (Default)</label>
+                                <textarea className="w-full rounded-lg border-slate-200" rows="4" value={editingOrg.payment_metadata || ''} onChange={e => setEditingOrg({ ...editingOrg, payment_metadata: e.target.value })} placeholder="e.g. Please Zelle (555) 123-4567..."></textarea>
+                                <p className="text-xs text-slate-500 mt-1">These instructions will be shown on order confirmation screens and emails unless overridden by a campaign.</p>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setEditingOrg(null)} className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
                                 <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium">Save Changes</button>
                             </div>
                         </form>

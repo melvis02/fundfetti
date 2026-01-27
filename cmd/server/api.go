@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/melvis02/fundfetti/internal/db"
+	"github.com/melvis02/fundfetti/internal/email"
 	"github.com/melvis02/fundfetti/internal/ordersheets"
 )
 
@@ -48,6 +49,15 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create order: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Send confirmation email asynchronously
+	go func() {
+		campaign, err := db.GetCampaign(campaignID)
+		if err == nil && campaign != nil {
+			org, _ := db.GetOrganization(campaign.OrganizationID)
+			email.SendOrderConfirmation(order, *campaign, org)
+		}
+	}()
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"status": "created"})
