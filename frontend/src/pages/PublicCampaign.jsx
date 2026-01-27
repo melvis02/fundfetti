@@ -214,6 +214,25 @@ export default function PublicCampaign() {
                             </div>
                         )}
 
+                        <div className="border-t border-slate-100 pt-6 mb-8 max-w-sm mx-auto text-left">
+                            <h3 className="font-semibold text-slate-800 mb-4">Order Summary</h3>
+                            <div className="space-y-2 mb-4">
+                                {Object.entries(cart).map(([pid, qty]) => {
+                                    const product = campaign.products?.find(p => p.id === parseInt(pid));
+                                    return (
+                                        <div key={pid} className="flex justify-between text-sm text-slate-600">
+                                            <span>{product.name} <span className="text-slate-400">x{qty}</span></span>
+                                            <span>${((product.price_cents * qty) / 100).toFixed(2)}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <div className="border-t border-dashed border-slate-200 pt-2 flex justify-between font-bold text-slate-900">
+                                <span>Total Due</span>
+                                <span>${(cartTotal() / 100).toFixed(2)}</span>
+                            </div>
+                        </div>
+
                         <button onClick={() => window.location.reload()} className="text-primary-600 hover:text-primary-800 font-medium">Place Another Order</button>
                     </div>
                 )}

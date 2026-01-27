@@ -121,6 +121,7 @@ func InitDB(driverName, dataSourceName string) error {
 		end_date TIMESTAMP,
 		payment_metadata TEXT,
 		instructions TEXT,
+		order_email_cc TEXT,
 		is_active BOOLEAN DEFAULT TRUE,
 		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 	);`, primaryKeyDef)
@@ -185,6 +186,9 @@ func InitDB(driverName, dataSourceName string) error {
 
 	// Organizations: payment_metadata
 	ignoreErr(addColumn(driverName, "organizations", "payment_metadata", "TEXT"))
+
+	// Campaigns: order_email_cc
+	ignoreErr(addColumn(driverName, "campaigns", "order_email_cc", "TEXT"))
 
 	return nil
 }
@@ -326,6 +330,7 @@ type Campaign struct {
 	EndDate                     time.Time `json:"end_date"`
 	PaymentMetadata             string    `json:"payment_metadata"` // JSON string or text
 	Instructions                string    `json:"instructions"`
+	OrderEmailCC                string    `json:"order_email_cc"`
 	IsActive                    bool      `json:"is_active"`
 	OrganizationName            string    `json:"organization_name,omitempty"`
 	OrganizationPaymentMetadata string    `json:"organization_payment_metadata,omitempty"`
