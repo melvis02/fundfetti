@@ -18,7 +18,7 @@ export default function OrganizationDashboard() {
     const [subLoading, setSubLoading] = useState(false);
 
     // Form states
-    const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '' });
+    const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '', order_email_cc: '' });
     const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0 });
     const [editingProduct, setEditingProduct] = useState(null);
     const [editingOrg, setEditingOrg] = useState(null);
@@ -72,7 +72,7 @@ export default function OrganizationDashboard() {
                 is_active: true
             };
             await api.createCampaign(id, payload);
-            setNewCampaign({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '' });
+            setNewCampaign({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '', order_email_cc: '' });
             fetchCampaigns();
         } catch (e) {
             console.error(e);
@@ -356,6 +356,11 @@ export default function OrganizationDashboard() {
                                         <input type="date" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.end_date} onChange={e => setNewCampaign({ ...newCampaign, end_date: e.target.value })} />
                                     </div>
                                     <div className="col-span-full">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Order Email CCs</label>
+                                        <input type="text" className="form-input w-full rounded-lg border-slate-200" value={newCampaign.order_email_cc} onChange={e => setNewCampaign({ ...newCampaign, order_email_cc: e.target.value })} placeholder="email1@example.com, email2@example.com" />
+                                        <p className="text-xs text-slate-500 mt-1">Comma-separated list of emails to receive order confirmations.</p>
+                                    </div>
+                                    <div className="col-span-full">
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Payment Instructions (Optional override)</label>
                                         <textarea className="form-input w-full rounded-lg border-slate-200" rows="2" value={newCampaign.payment_metadata} onChange={e => setNewCampaign({ ...newCampaign, payment_metadata: e.target.value })} placeholder="Override organization payment instructions for this campaign..."></textarea>
                                     </div>
@@ -633,6 +638,11 @@ export default function OrganizationDashboard() {
                                     <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
                                     <input type="date" required className="w-full rounded-lg border-slate-200" value={editingCampaign.end_date} onChange={e => setEditingCampaign({ ...editingCampaign, end_date: e.target.value })} />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Order Email CCs</label>
+                                <input type="text" className="w-full rounded-lg border-slate-200" value={editingCampaign.order_email_cc || ''} onChange={e => setEditingCampaign({ ...editingCampaign, order_email_cc: e.target.value })} placeholder="email1@example.com, email2@example.com" />
                             </div>
 
                             <div>

@@ -77,9 +77,22 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 		fromEmail = "orders@fundfetti.com" // Placeholder, user likely needs to configure this
 	}
 
+	// Parse CC emails
+	var ccEmails []string
+	if campaign.OrderEmailCC != "" {
+		parts := strings.Split(campaign.OrderEmailCC, ",")
+		for _, part := range parts {
+			trimmed := strings.TrimSpace(part)
+			if trimmed != "" {
+				ccEmails = append(ccEmails, trimmed)
+			}
+		}
+	}
+
 	params := &resend.SendEmailRequest{
 		From:    fmt.Sprintf("%s <%s>", campaign.Name, fromEmail),
 		To:      []string{order.Email},
+		Cc:      ccEmails,
 		Subject: subject,
 		Html:    htmlBody,
 	}
