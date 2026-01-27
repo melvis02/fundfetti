@@ -28,13 +28,13 @@ func CreateCampaign(c Campaign) (int64, error) {
 func GetCampaign(id int64) (*Campaign, error) {
 	var c Campaign
 	query := `
-		SELECT c.id, c.organization_id, c.name, c.description, c.start_date, c.end_date, c.payment_metadata, c.instructions, c.is_active, o.name
+		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), c.is_active, o.name, COALESCE(o.payment_metadata, '')
 		FROM campaigns c
 		JOIN organizations o ON c.organization_id = o.id
 		WHERE c.id = ?
 	`
 	err := DB.QueryRow(Rebind(query), id).
-		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive, &c.OrganizationName)
+		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive, &c.OrganizationName, &c.OrganizationPaymentMetadata)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Not found
@@ -53,7 +53,7 @@ func GetCampaign(id int64) (*Campaign, error) {
 }
 
 func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns WHERE organization_id = ? ORDER BY start_date DESC"), orgID)
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), start_date, end_date, COALESCE(payment_metadata, ''), COALESCE(instructions, ''), is_active FROM campaigns WHERE organization_id = ? ORDER BY start_date DESC"), orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query campaigns: %w", err)
 	}
@@ -72,7 +72,7 @@ func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
 
 func GetActiveCampaigns() ([]Campaign, error) {
 	query := `
-		SELECT c.id, c.organization_id, c.name, c.description, c.start_date, c.end_date, c.payment_metadata, c.instructions, c.is_active, o.name
+		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), c.is_active, o.name, COALESCE(o.payment_metadata, '')
 		FROM campaigns c
 		JOIN organizations o ON c.organization_id = o.id
 		WHERE c.is_active = 1
@@ -80,7 +80,7 @@ func GetActiveCampaigns() ([]Campaign, error) {
 	`
 	if currentDriver == "postgres" {
 		query = `
-			SELECT c.id, c.organization_id, c.name, c.description, c.start_date, c.end_date, c.payment_metadata, c.instructions, c.is_active, o.name
+			SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), c.is_active, o.name, COALESCE(o.payment_metadata, '')
 			FROM campaigns c
 			JOIN organizations o ON c.organization_id = o.id
 			WHERE c.is_active = true
@@ -97,7 +97,7 @@ func GetActiveCampaigns() ([]Campaign, error) {
 	campaigns := []Campaign{}
 	for rows.Next() {
 		var c Campaign
-		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive, &c.OrganizationName); err != nil {
+		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.IsActive, &c.OrganizationName, &c.OrganizationPaymentMetadata); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
 		campaigns = append(campaigns, c)
@@ -107,7 +107,7 @@ func GetActiveCampaigns() ([]Campaign, error) {
 
 // Deprecated: Use GetOrganizationCampaigns
 func GetAllCampaigns() ([]Campaign, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, description, start_date, end_date, payment_metadata, instructions, is_active FROM campaigns ORDER BY start_date DESC"))
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), start_date, end_date, COALESCE(payment_metadata, ''), COALESCE(instructions, ''), is_active FROM campaigns ORDER BY start_date DESC"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query campaigns: %w", err)
 	}

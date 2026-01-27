@@ -84,6 +84,7 @@ func InitDB(driverName, dataSourceName string) error {
 		name TEXT NOT NULL,
 		slug TEXT NOT NULL UNIQUE,
 		contact_email TEXT,
+		payment_metadata TEXT,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`, primaryKeyDef)
 
@@ -181,6 +182,9 @@ func InitDB(driverName, dataSourceName string) error {
 
 	// Campaigns: organization_id
 	ignoreErr(addColumn(driverName, "campaigns", "organization_id", "INTEGER"))
+
+	// Organizations: payment_metadata
+	ignoreErr(addColumn(driverName, "organizations", "payment_metadata", "TEXT"))
 
 	return nil
 }
@@ -295,11 +299,12 @@ type DBUser struct {
 }
 
 type Organization struct {
-	ID           int64     `json:"id"`
-	Name         string    `json:"name"`
-	Slug         string    `json:"slug"`
-	ContactEmail string    `json:"contact_email"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID              int64     `json:"id"`
+	Name            string    `json:"name"`
+	Slug            string    `json:"slug"`
+	ContactEmail    string    `json:"contact_email"`
+	PaymentMetadata string    `json:"payment_metadata"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type Product struct {
@@ -313,17 +318,18 @@ type Product struct {
 }
 
 type Campaign struct {
-	ID               int64     `json:"id"`
-	OrganizationID   int64     `json:"organization_id"`
-	Name             string    `json:"name"`
-	Description      string    `json:"description"`
-	StartDate        time.Time `json:"start_date"`
-	EndDate          time.Time `json:"end_date"`
-	PaymentMetadata  string    `json:"payment_metadata"` // JSON string or text
-	Instructions     string    `json:"instructions"`
-	IsActive         bool      `json:"is_active"`
-	OrganizationName string    `json:"organization_name,omitempty"`
-	Products         []Product `json:"products,omitempty"`
+	ID                          int64     `json:"id"`
+	OrganizationID              int64     `json:"organization_id"`
+	Name                        string    `json:"name"`
+	Description                 string    `json:"description"`
+	StartDate                   time.Time `json:"start_date"`
+	EndDate                     time.Time `json:"end_date"`
+	PaymentMetadata             string    `json:"payment_metadata"` // JSON string or text
+	Instructions                string    `json:"instructions"`
+	IsActive                    bool      `json:"is_active"`
+	OrganizationName            string    `json:"organization_name,omitempty"`
+	OrganizationPaymentMetadata string    `json:"organization_payment_metadata,omitempty"`
+	Products                    []Product `json:"products,omitempty"`
 }
 
 func GetOrders() ([]DBOrder, error) {

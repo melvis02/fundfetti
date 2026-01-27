@@ -27,7 +27,7 @@ func CreateProduct(p Product) (int64, error) {
 
 func GetProduct(id int64) (*Product, error) {
 	var p Product
-	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, description, price_cents, image_url, stock_quantity FROM products WHERE id = ?"), id).
+	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE id = ?"), id).
 		Scan(&p.ID, &p.OrganizationID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -39,7 +39,7 @@ func GetProduct(id int64) (*Product, error) {
 }
 
 func GetOrganizationProducts(orgID int64) ([]Product, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, description, price_cents, image_url, stock_quantity FROM products WHERE organization_id = ? ORDER BY name ASC"), orgID)
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE organization_id = ? ORDER BY name ASC"), orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query products: %w", err)
 	}
@@ -58,7 +58,7 @@ func GetOrganizationProducts(orgID int64) ([]Product, error) {
 
 // Deprecated: Use GetOrganizationProducts
 func GetAllProducts() ([]Product, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, description, price_cents, image_url, stock_quantity FROM products ORDER BY name ASC"))
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products ORDER BY name ASC"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query products: %w", err)
 	}
@@ -87,7 +87,7 @@ func DeleteProduct(id int64) error {
 
 func GetProductByName(orgID int64, name string) (*Product, error) {
 	var p Product
-	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, description, price_cents, image_url, stock_quantity FROM products WHERE organization_id = ? AND name = ?"), orgID, name).
+	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE organization_id = ? AND name = ?"), orgID, name).
 		Scan(&p.ID, &p.OrganizationID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity)
 	if err != nil {
 		if err == sql.ErrNoRows {

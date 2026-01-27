@@ -207,10 +207,10 @@ export default function PublicCampaign() {
                         <h2 className="text-2xl font-bold text-slate-900 mb-2">Order Received!</h2>
                         <p className="text-slate-600 mb-6">Thank you for supporting {campaign.name}.<br />We have sent a confirmation email to {customer.email}.</p>
 
-                        {campaign.payment_metadata && (
+                        {(campaign.payment_metadata || campaign.organization_payment_metadata) && (
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-left max-w-sm mx-auto mb-8">
                                 <h3 className="font-semibold text-blue-900 mb-2 text-sm uppercase tracking-wide">Payment Instructions</h3>
-                                <p className="text-blue-800 text-sm whitespace-pre-wrap">{campaign.payment_metadata}</p>
+                                <p className="text-blue-800 text-sm whitespace-pre-wrap">{campaign.payment_metadata || campaign.organization_payment_metadata}</p>
                             </div>
                         )}
 
