@@ -128,6 +128,11 @@ export default function PublicCampaign() {
                 {/* Step 1: Products */}
                 {step === 1 && (
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        {campaign.header_text && (
+                            <div className="mb-6 bg-blue-50 border border-blue-100 rounded-lg p-4 text-blue-900 shadow-sm whitespace-pre-wrap">
+                                {campaign.header_text}
+                            </div>
+                        )}
                         <h2 className="text-xl font-semibold mb-6">Select Items</h2>
                         <div className="space-y-8">
                             {Object.entries(categorizedProducts).map(([category, products]) => (
@@ -174,6 +179,11 @@ export default function PublicCampaign() {
                 {/* Step 2: Details */}
                 {step === 2 && (
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        {campaign.header_text && (
+                            <div className="mb-6 bg-blue-50 border border-blue-100 rounded-lg p-4 text-blue-900 shadow-sm whitespace-pre-wrap">
+                                {campaign.header_text}
+                            </div>
+                        )}
                         <h2 className="text-xl font-semibold mb-6">Your Details</h2>
                         <div className="space-y-4">
                             <div>
@@ -244,9 +254,17 @@ export default function PublicCampaign() {
                 {/* Step 4: Success */}
                 {step === 4 && (
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-                        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">✓</div>
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                        </div>
                         <h2 className="text-2xl font-bold text-slate-900 mb-2">Order Received!</h2>
-                        <p className="text-slate-600 mb-6">Thank you for supporting {campaign.name}.<br />We have sent a confirmation email to {customer.email}.</p>
+                        <p className="text-slate-500 mb-6">Thank you for supporting {campaign.name}. We've sent a confirmation email to {customer.email}.</p>
+
+                        {campaign.header_text && (
+                            <div className="mb-8 text-left bg-blue-50 border border-blue-100 rounded-lg p-4 text-blue-900 shadow-sm whitespace-pre-wrap">
+                                {campaign.header_text}
+                            </div>
+                        )}
 
                         {(campaign.payment_metadata || campaign.organization_payment_metadata) && (
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-left max-w-sm mx-auto mb-8">
