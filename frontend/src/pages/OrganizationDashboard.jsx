@@ -219,7 +219,8 @@ export default function OrganizationDashboard() {
             const payload = {
                 ...editingProduct,
                 price_cents: Math.round(parseFloat(editingProduct.price_dollars) * 100),
-                stock_quantity: parseInt(editingProduct.stock_quantity)
+                stock_quantity: parseInt(editingProduct.stock_quantity),
+                category_id: editingProduct.category_id ? parseInt(editingProduct.category_id) : null
             };
             await api.updateProduct(editingProduct.id, payload);
             setEditingProduct(null);
