@@ -21,6 +21,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/c/:id" element={<PublicCampaign />} />
+          <Route path="/c/:orgSlug/:campaignSlug" element={<PublicCampaign />} />
           <Route path="/login" element={<Login />} />
 
           {/* Print Routes (Standalone - protected?) - Maybe keep public for ease of printing, or protect? Let's protect them for now as they contain data */}
