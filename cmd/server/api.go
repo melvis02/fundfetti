@@ -266,7 +266,7 @@ func getCampaignHandler(w http.ResponseWriter, r *http.Request) {
 
 func getCampaignBySlugHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	orgSlug := vars["org_slug"]
+	orgSlug := vars["org_slug"] // Will be empty string if not matched by mux
 	campaignSlug := vars["campaign_slug"]
 
 	campaign, err := db.GetCampaignBySlug(orgSlug, campaignSlug)

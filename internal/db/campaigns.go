@@ -174,14 +174,28 @@ func GetCampaignProducts(campaignID int64) ([]Product, error) {
 
 func GetCampaignBySlug(orgSlug string, campaignSlug string) (*Campaign, error) {
 	var c Campaign
-	query := `
-		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, COALESCE(c.catalog_url, ''), COALESCE(c.custom_email_text, ''), COALESCE(c.header_text, ''), COALESCE(c.slug, ''), o.name, COALESCE(o.payment_metadata, ''), o.slug
-		FROM campaigns c
-		JOIN organizations o ON c.organization_id = o.id
-		WHERE c.slug = ? AND o.slug = ?
-	`
-	err := DB.QueryRow(Rebind(query), campaignSlug, orgSlug).
-		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug, &c.OrganizationName, &c.OrganizationPaymentMetadata, &c.OrganizationSlug)
+	var query string
+	var err error
+
+	if orgSlug != "" {
+		query = `
+			SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, COALESCE(c.catalog_url, ''), COALESCE(c.custom_email_text, ''), COALESCE(c.header_text, ''), COALESCE(c.slug, ''), o.name, COALESCE(o.payment_metadata, ''), o.slug
+			FROM campaigns c
+			JOIN organizations o ON c.organization_id = o.id
+			WHERE c.slug = ? AND o.slug = ?
+		`
+		err = DB.QueryRow(Rebind(query), campaignSlug, orgSlug).
+			Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug, &c.OrganizationName, &c.OrganizationPaymentMetadata, &c.OrganizationSlug)
+	} else {
+		query = `
+			SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, COALESCE(c.catalog_url, ''), COALESCE(c.custom_email_text, ''), COALESCE(c.header_text, ''), COALESCE(c.slug, ''), o.name, COALESCE(o.payment_metadata, ''), o.slug
+			FROM campaigns c
+			JOIN organizations o ON c.organization_id = o.id
+			WHERE c.slug = ?
+		`
+		err = DB.QueryRow(Rebind(query), campaignSlug).
+			Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug, &c.OrganizationName, &c.OrganizationPaymentMetadata, &c.OrganizationSlug)
+	}
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Not found
