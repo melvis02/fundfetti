@@ -86,7 +86,7 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 	// For Resend, user must verify domain. We'll use a standard one for now or env var.
 	fromEmail := os.Getenv("FROM_EMAIL")
 	if fromEmail == "" {
-		fromEmail = "orders@fundfetti.com" // Placeholder, user likely needs to configure this
+		fromEmail = "orders@fundfetti.org" // Placeholder, user likely needs to configure this
 	}
 
 	// Parse CC emails
