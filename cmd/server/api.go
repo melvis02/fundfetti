@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/csv"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -61,7 +62,11 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		campaign, err := db.GetCampaign(campaignID)
 		if err == nil && campaign != nil {
 			org, _ := db.GetOrganization(campaign.OrganizationID)
-			email.SendOrderConfirmation(order, *campaign, org)
+			if err := email.SendOrderConfirmation(order, *campaign, org); err != nil {
+				log.Printf("[ERROR] Failed to send order confirmation email: %v", err)
+			}
+		} else {
+			log.Printf("[ERROR] Failed to get campaign for email dispatch: %v", err)
 		}
 	}()
 
