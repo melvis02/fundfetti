@@ -6,18 +6,18 @@ import (
 )
 
 func CreateCampaign(c Campaign) (int64, error) {
-	query := "INSERT INTO campaigns (organization_id, name, description, start_date, end_date, payment_metadata, instructions, order_email_cc, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO campaigns (organization_id, name, description, start_date, end_date, payment_metadata, instructions, order_email_cc, is_active, catalog_url, custom_email_text, header_text, slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	if currentDriver == "postgres" {
 		var id int64
-		err := DB.QueryRow(Rebind(query+" RETURNING id"), c.OrganizationID, c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.OrderEmailCC, c.IsActive).Scan(&id)
+		err := DB.QueryRow(Rebind(query+" RETURNING id"), c.OrganizationID, c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.OrderEmailCC, c.IsActive, c.CatalogURL, c.CustomEmailText, c.HeaderText, c.Slug).Scan(&id)
 		if err != nil {
 			return 0, fmt.Errorf("failed to insert campaign: %w", err)
 		}
 		return id, nil
 	}
 
-	res, err := DB.Exec(query, c.OrganizationID, c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.OrderEmailCC, c.IsActive)
+	res, err := DB.Exec(query, c.OrganizationID, c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.OrderEmailCC, c.IsActive, c.CatalogURL, c.CustomEmailText, c.HeaderText, c.Slug)
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute insert campaign: %w", err)
 	}
@@ -28,13 +28,13 @@ func CreateCampaign(c Campaign) (int64, error) {
 func GetCampaign(id int64) (*Campaign, error) {
 	var c Campaign
 	query := `
-		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, o.name, COALESCE(o.payment_metadata, '')
+		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, COALESCE(c.catalog_url, ''), COALESCE(c.custom_email_text, ''), COALESCE(c.header_text, ''), COALESCE(c.slug, ''), o.name, COALESCE(o.payment_metadata, ''), o.slug
 		FROM campaigns c
 		JOIN organizations o ON c.organization_id = o.id
 		WHERE c.id = ?
 	`
 	err := DB.QueryRow(Rebind(query), id).
-		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.OrganizationName, &c.OrganizationPaymentMetadata)
+		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug, &c.OrganizationName, &c.OrganizationPaymentMetadata, &c.OrganizationSlug)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Not found
@@ -53,7 +53,7 @@ func GetCampaign(id int64) (*Campaign, error) {
 }
 
 func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), start_date, end_date, COALESCE(payment_metadata, ''), COALESCE(instructions, ''), COALESCE(order_email_cc, ''), is_active FROM campaigns WHERE organization_id = ? ORDER BY start_date DESC"), orgID)
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), start_date, end_date, COALESCE(payment_metadata, ''), COALESCE(instructions, ''), COALESCE(order_email_cc, ''), is_active, COALESCE(catalog_url, ''), COALESCE(custom_email_text, ''), COALESCE(header_text, ''), COALESCE(slug, '') FROM campaigns WHERE organization_id = ? ORDER BY start_date DESC"), orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query campaigns: %w", err)
 	}
@@ -62,7 +62,7 @@ func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
 	campaigns := []Campaign{}
 	for rows.Next() {
 		var c Campaign
-		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive); err != nil {
+		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
 		campaigns = append(campaigns, c)
@@ -72,7 +72,7 @@ func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
 
 func GetActiveCampaigns() ([]Campaign, error) {
 	query := `
-		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, o.name, COALESCE(o.payment_metadata, '')
+		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, COALESCE(c.catalog_url, ''), COALESCE(c.custom_email_text, ''), COALESCE(c.header_text, ''), COALESCE(c.slug, ''), o.name, COALESCE(o.payment_metadata, ''), o.slug
 		FROM campaigns c
 		JOIN organizations o ON c.organization_id = o.id
 		WHERE c.is_active = 1
@@ -80,7 +80,7 @@ func GetActiveCampaigns() ([]Campaign, error) {
 	`
 	if currentDriver == "postgres" {
 		query = `
-			SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, o.name, COALESCE(o.payment_metadata, '')
+			SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, COALESCE(c.catalog_url, ''), COALESCE(c.custom_email_text, ''), COALESCE(c.header_text, ''), COALESCE(c.slug, ''), o.name, COALESCE(o.payment_metadata, ''), o.slug
 			FROM campaigns c
 			JOIN organizations o ON c.organization_id = o.id
 			WHERE c.is_active = true
@@ -97,7 +97,7 @@ func GetActiveCampaigns() ([]Campaign, error) {
 	campaigns := []Campaign{}
 	for rows.Next() {
 		var c Campaign
-		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.OrganizationName, &c.OrganizationPaymentMetadata); err != nil {
+		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug, &c.OrganizationName, &c.OrganizationPaymentMetadata, &c.OrganizationSlug); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
 		campaigns = append(campaigns, c)
@@ -107,7 +107,7 @@ func GetActiveCampaigns() ([]Campaign, error) {
 
 // Deprecated: Use GetOrganizationCampaigns
 func GetAllCampaigns() ([]Campaign, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), start_date, end_date, COALESCE(payment_metadata, ''), COALESCE(instructions, ''), COALESCE(order_email_cc, ''), is_active FROM campaigns ORDER BY start_date DESC"))
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), start_date, end_date, COALESCE(payment_metadata, ''), COALESCE(instructions, ''), COALESCE(order_email_cc, ''), is_active, COALESCE(catalog_url, ''), COALESCE(custom_email_text, ''), COALESCE(header_text, ''), COALESCE(slug, '') FROM campaigns ORDER BY start_date DESC"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query campaigns: %w", err)
 	}
@@ -116,7 +116,7 @@ func GetAllCampaigns() ([]Campaign, error) {
 	campaigns := []Campaign{}
 	for rows.Next() {
 		var c Campaign
-		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive); err != nil {
+		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
 		campaigns = append(campaigns, c)
@@ -125,7 +125,7 @@ func GetAllCampaigns() ([]Campaign, error) {
 }
 
 func UpdateCampaign(c Campaign) error {
-	_, err := DB.Exec(Rebind("UPDATE campaigns SET name = ?, description = ?, start_date = ?, end_date = ?, payment_metadata = ?, instructions = ?, order_email_cc = ?, is_active = ? WHERE id = ?"), c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.OrderEmailCC, c.IsActive, c.ID)
+	_, err := DB.Exec(Rebind("UPDATE campaigns SET name = ?, description = ?, start_date = ?, end_date = ?, payment_metadata = ?, instructions = ?, order_email_cc = ?, is_active = ?, catalog_url = ?, custom_email_text = ?, header_text = ?, slug = ? WHERE id = ?"), c.Name, c.Description, c.StartDate, c.EndDate, c.PaymentMetadata, c.Instructions, c.OrderEmailCC, c.IsActive, c.CatalogURL, c.CustomEmailText, c.HeaderText, c.Slug, c.ID)
 	return err
 }
 
@@ -148,11 +148,12 @@ func RemoveProductFromCampaign(campaignID, productID int64) error {
 
 func GetCampaignProducts(campaignID int64) ([]Product, error) {
 	query := `
-		SELECT p.id, p.name, p.description, p.price_cents, p.image_url, p.stock_quantity
+		SELECT p.id, p.organization_id, p.category_id, p.name, p.description, p.price_cents, p.image_url, p.stock_quantity, COALESCE(cat.name, '') as category_name
 		FROM products p
 		JOIN campaign_products cp ON p.id = cp.product_id
+		LEFT JOIN categories cat ON p.category_id = cat.id
 		WHERE cp.campaign_id = ?
-		ORDER BY p.name ASC
+		ORDER BY cat.name ASC, p.name ASC
 	`
 	rows, err := DB.Query(Rebind(query), campaignID)
 	if err != nil {
@@ -163,10 +164,37 @@ func GetCampaignProducts(campaignID int64) ([]Product, error) {
 	products := []Product{}
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.CategoryID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity, &p.CategoryName); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
 	}
 	return products, nil
+}
+
+func GetCampaignBySlug(orgSlug string, campaignSlug string) (*Campaign, error) {
+	var c Campaign
+	query := `
+		SELECT c.id, c.organization_id, c.name, COALESCE(c.description, ''), c.start_date, c.end_date, COALESCE(c.payment_metadata, ''), COALESCE(c.instructions, ''), COALESCE(c.order_email_cc, ''), c.is_active, COALESCE(c.catalog_url, ''), COALESCE(c.custom_email_text, ''), COALESCE(c.header_text, ''), COALESCE(c.slug, ''), o.name, COALESCE(o.payment_metadata, ''), o.slug
+		FROM campaigns c
+		JOIN organizations o ON c.organization_id = o.id
+		WHERE c.slug = ? AND o.slug = ?
+	`
+	err := DB.QueryRow(Rebind(query), campaignSlug, orgSlug).
+		Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug, &c.OrganizationName, &c.OrganizationPaymentMetadata, &c.OrganizationSlug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Not found
+		}
+		return nil, fmt.Errorf("failed to get campaign by slug: %w", err)
+	}
+
+	// Fetch products associated with this campaign
+	products, err := GetCampaignProducts(c.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get campaign products: %w", err)
+	}
+	c.Products = products
+
+	return &c, nil
 }

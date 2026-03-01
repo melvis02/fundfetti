@@ -56,6 +56,7 @@ func StartServer() {
 	router.HandleFunc("/api/campaigns/{id}", getCampaignHandler).Methods("GET")
 	router.HandleFunc("/api/campaigns", listCampaignsHandler).Methods("GET") // Public for now
 	router.HandleFunc("/api/products", listProductsHandler).Methods("GET")   // Public for now
+	router.HandleFunc("/api/public/campaigns/{org_slug}/{campaign_slug}", getCampaignBySlugHandler).Methods("GET")
 
 	// Protected Admin Routes
 	adminRouter := router.PathPrefix("/api").Subrouter()
@@ -82,8 +83,11 @@ func StartServer() {
 	// Admin: Nested Resources
 	adminRouter.HandleFunc("/organizations/{org_id}/products", listProductsHandler).Methods("GET")
 	adminRouter.HandleFunc("/organizations/{org_id}/products", createProductHandler).Methods("POST")
+	adminRouter.HandleFunc("/organizations/{org_id}/products/import", importProductsHandler).Methods("POST")
 	adminRouter.HandleFunc("/organizations/{org_id}/campaigns", listCampaignsHandler).Methods("GET")
 	adminRouter.HandleFunc("/organizations/{org_id}/campaigns", createCampaignHandler).Methods("POST")
+	adminRouter.HandleFunc("/organizations/{org_id}/categories", listCategoriesHandler).Methods("GET")
+	adminRouter.HandleFunc("/organizations/{org_id}/categories", createCategoryHandler).Methods("POST")
 
 	// Admin: Product Modification (Global/Direct)
 	adminRouter.HandleFunc("/products", createProductHandler).Methods("POST")
@@ -98,6 +102,10 @@ func StartServer() {
 	adminRouter.HandleFunc("/campaigns/{id}", deleteCampaignHandler).Methods("DELETE")
 	adminRouter.HandleFunc("/campaigns/{id}/products", addCampaignProductHandler).Methods("POST")
 	adminRouter.HandleFunc("/campaigns/{id}/products/{product_id}", removeCampaignProductHandler).Methods("DELETE")
+
+	// Admin: Category Modification (Global/Direct)
+	adminRouter.HandleFunc("/categories/{id}", updateCategoryHandler).Methods("PUT")
+	adminRouter.HandleFunc("/categories/{id}", deleteCategoryHandler).Methods("DELETE")
 
 	// SPA Handler (Serve React App)
 	// 1. Serve static assets directly

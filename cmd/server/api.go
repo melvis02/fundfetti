@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -24,6 +25,11 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Email == "" {
+		http.Error(w, "Email address is required", http.StatusBadRequest)
 		return
 	}
 
@@ -258,6 +264,23 @@ func getCampaignHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(campaign)
 }
 
+func getCampaignBySlugHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	orgSlug := vars["org_slug"]
+	campaignSlug := vars["campaign_slug"]
+
+	campaign, err := db.GetCampaignBySlug(orgSlug, campaignSlug)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if campaign == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	json.NewEncoder(w).Encode(campaign)
+}
+
 func createCampaignHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	var c db.Campaign
@@ -333,4 +356,113 @@ func removeCampaignProductHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+// -- Categories --
+
+func listCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	orgID, _ := strconv.ParseInt(vars["org_id"], 10, 64)
+	categories, err := db.GetOrganizationCategories(orgID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(categories)
+}
+
+func createCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	orgID, _ := strconv.ParseInt(vars["org_id"], 10, 64)
+
+	var c db.Category
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+	c.OrganizationID = orgID
+
+	id, err := db.CreateCategory(c)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	c.ID = id
+	json.NewEncoder(w).Encode(c)
+}
+
+func updateCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+	var c db.Category
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+	c.ID = id
+	if err := db.UpdateCategory(c); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(c)
+}
+
+func deleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+	if err := db.DeleteCategory(id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// -- Product Import --
+
+func importProductsHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	orgID, _ := strconv.ParseInt(vars["org_id"], 10, 64)
+
+	file, _, err := r.FormFile("products_csv")
+	if err != nil {
+		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		http.Error(w, "Error reading CSV", http.StatusBadRequest)
+		return
+	}
+
+	count := 0
+	for i, record := range records {
+		if i == 0 {
+			continue // skip header
+		}
+		if len(record) < 2 {
+			continue
+		}
+
+		name := record[0]
+		priceStr := record[1]
+
+		price, _ := strconv.ParseFloat(priceStr, 64)
+		priceCents := int(price * 100)
+
+		p, _ := db.GetProductByName(orgID, name)
+		if p == nil {
+			db.CreateProduct(db.Product{
+				OrganizationID: orgID,
+				Name:           name,
+				PriceCents:     priceCents,
+				StockQuantity:  -1,
+			})
+			count++
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "count": count})
 }

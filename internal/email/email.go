@@ -48,10 +48,22 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 	}
 
 	// Simple HTML template
+	headerInjection := ""
+	if campaign.HeaderText != "" {
+		headerInjection = fmt.Sprintf(`<p style="background-color: #f1f5f9; padding: 10px; border-radius: 5px;">%s</p>`, campaign.HeaderText)
+	}
+
+	customBodyInjection := ""
+	if campaign.CustomEmailText != "" {
+		customBodyInjection = fmt.Sprintf(`<p>%s</p>`, campaign.CustomEmailText)
+	}
+
 	htmlBody := fmt.Sprintf(`
 	<html>
 	<body>
 		<h2>Thank you for your order, %s!</h2>
+		%s
+		%s
 		<p>You have successfully placed an order for <strong>%s</strong>.</p>
 		
 		<h3>Order Details:</h3>
@@ -68,7 +80,7 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 		<p>If you have any questions, please reply to this email or contact us.</p>
 	</body>
 	</html>
-	`, order.Name, campaign.Name, itemsList.String(), total, paymentInfo)
+	`, order.Name, headerInjection, customBodyInjection, campaign.Name, itemsList.String(), total, paymentInfo)
 
 	// Determine sender email - try to use a verified domain if we knew it, or default
 	// For Resend, user must verify domain. We'll use a standard one for now or env var.

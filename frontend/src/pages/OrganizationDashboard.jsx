@@ -15,13 +15,16 @@ export default function OrganizationDashboard() {
     // Sub-data
     const [campaigns, setCampaigns] = useState([]);
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [subLoading, setSubLoading] = useState(false);
 
     // Form states
-    const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '', order_email_cc: '' });
-    const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0 });
+    const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '', order_email_cc: '', slug: '', catalog_url: '', header_text: '', custom_email_text: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0, category_id: '' });
+    const [newCategory, setNewCategory] = useState({ name: '' });
     const [editingProduct, setEditingProduct] = useState(null);
     const [editingOrg, setEditingOrg] = useState(null);
+    const [editingCategory, setEditingCategory] = useState(null);
 
     const fetchOrgDetails = async () => {
         try {
@@ -62,6 +65,15 @@ export default function OrganizationDashboard() {
         }
     };
 
+    const fetchCategories = async () => {
+        try {
+            const data = await api.getOrgCategories(id);
+            setCategories(data || []);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const handleCreateCampaign = async (e) => {
         e.preventDefault();
         try {
@@ -72,7 +84,7 @@ export default function OrganizationDashboard() {
                 is_active: true
             };
             await api.createCampaign(id, payload);
-            setNewCampaign({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '', order_email_cc: '' });
+            setNewCampaign({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '', order_email_cc: '', slug: '', catalog_url: '', header_text: '', custom_email_text: '' });
             fetchCampaigns();
         } catch (e) {
             console.error(e);
@@ -85,14 +97,44 @@ export default function OrganizationDashboard() {
         try {
             const payload = {
                 ...newProduct,
-                price_cents: Math.round(parseFloat(newProduct.price_cents) * 100)
+                price_cents: Math.round(parseFloat(newProduct.price_cents) * 100),
+                category_id: newProduct.category_id ? parseInt(newProduct.category_id) : null
             };
             await api.createProduct(id, payload);
-            setNewProduct({ name: '', price_cents: 0 });
+            setNewProduct({ name: '', price_cents: 0, category_id: '' });
             fetchProducts();
         } catch (e) {
             console.error(e);
             alert('Failed to create product');
+        }
+    };
+
+    const handleImportProducts = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            setSubLoading(true);
+            const res = await api.importProducts(id, file);
+            alert(`Successfully imported ${res.count} products!`);
+            fetchProducts();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to import products');
+        } finally {
+            setSubLoading(false);
+            e.target.value = null; // reset input
+        }
+    };
+
+    const handleCreateCategory = async (e) => {
+        e.preventDefault();
+        try {
+            await api.createCategory(id, newCategory);
+            setNewCategory({ name: '' });
+            fetchCategories();
+        } catch (e) {
+            console.error(e);
+            alert('Failed to create category');
         }
     };
 
@@ -208,8 +250,9 @@ export default function OrganizationDashboard() {
     useEffect(() => {
         if (org) {
             if (activeTab === 'campaigns') fetchCampaigns();
-            if (activeTab === 'products') fetchProducts();
+            if (activeTab === 'products') { fetchProducts(); fetchCategories(); }
             if (activeTab === 'orders') fetchOrders();
+            if (activeTab === 'categories') fetchCategories();
         }
     }, [org, activeTab]);
 
@@ -332,6 +375,15 @@ export default function OrganizationDashboard() {
                         >
                             Users
                         </button>
+                        <button
+                            onClick={() => setActiveTab('categories')}
+                            className={`${activeTab === 'categories'
+                                ? 'border-primary-500 text-primary-600'
+                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                        >
+                            Categories
+                        </button>
                     </nav>
                 </div>
 
@@ -355,6 +407,22 @@ export default function OrganizationDashboard() {
                                         <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
                                         <input type="date" required className="form-input w-full rounded-lg border-slate-200" value={newCampaign.end_date} onChange={e => setNewCampaign({ ...newCampaign, end_date: e.target.value })} />
                                     </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">URL Slug (Friendly URL)</label>
+                                        <input type="text" className="form-input w-full rounded-lg border-slate-200" value={newCampaign.slug} onChange={e => setNewCampaign({ ...newCampaign, slug: e.target.value })} placeholder="spring-sale" />
+                                    </div>
+                                    <div className="col-span-full md:col-span-2 lg:col-span-2">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Catalog PDF Link (Optional)</label>
+                                        <input type="url" className="form-input w-full rounded-lg border-slate-200" value={newCampaign.catalog_url} onChange={e => setNewCampaign({ ...newCampaign, catalog_url: e.target.value })} placeholder="https://drive.google.com/..." />
+                                    </div>
+                                    <div className="col-span-full">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Header Text (Order emails)</label>
+                                        <textarea className="form-input w-full rounded-lg border-slate-200" rows="2" value={newCampaign.header_text} onChange={e => setNewCampaign({ ...newCampaign, header_text: e.target.value })} placeholder="Pick up dates are March 1st to 3rd..."></textarea>
+                                    </div>
+                                    <div className="col-span-full">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Custom Email Text (Order emails)</label>
+                                        <textarea className="form-input w-full rounded-lg border-slate-200" rows="2" value={newCampaign.custom_email_text} onChange={e => setNewCampaign({ ...newCampaign, custom_email_text: e.target.value })} placeholder="Thank you for supporting our troop..."></textarea>
+                                    </div>
                                     <div className="col-span-full">
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Order Email CCs</label>
                                         <input type="text" className="form-input w-full rounded-lg border-slate-200" value={newCampaign.order_email_cc} onChange={e => setNewCampaign({ ...newCampaign, order_email_cc: e.target.value })} placeholder="email1@example.com, email2@example.com" />
@@ -364,7 +432,7 @@ export default function OrganizationDashboard() {
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Payment Instructions (Optional override)</label>
                                         <textarea className="form-input w-full rounded-lg border-slate-200" rows="2" value={newCampaign.payment_metadata} onChange={e => setNewCampaign({ ...newCampaign, payment_metadata: e.target.value })} placeholder="Override organization payment instructions for this campaign..."></textarea>
                                     </div>
-                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Create Campaign</button>
+                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 mt-2">Create Campaign</button>
                                 </form>
                             </div>
                         )}
@@ -397,7 +465,7 @@ export default function OrganizationDashboard() {
                                         {user?.role !== 'reader' && (
                                             <button onClick={() => openManageProducts(c)} className="text-primary-600 hover:text-primary-700 flex-1 text-left">Manage Products</button>
                                         )}
-                                        <Link to={`/c/${c.id}`} target="_blank" className="text-slate-500 hover:text-slate-700 mr-2">View</Link>
+                                        <Link to={c.slug && org.slug ? `/c/${org.slug}/${c.slug}` : `/c/${c.id}`} target="_blank" className="text-slate-500 hover:text-slate-700 mr-2">View</Link>
                                         {user?.role !== 'reader' && (
                                             <>
                                                 <button onClick={() => openEditCampaign(c)} className="text-slate-400 hover:text-slate-600">✎</button>
@@ -421,20 +489,44 @@ export default function OrganizationDashboard() {
                         {/* Create Product */}
                         {user?.role !== 'reader' && (
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-                                <h3 className="text-lg font-semibold text-slate-800 mb-4">Add Product</h3>
-                                <form onSubmit={handleCreateProduct} className="flex gap-4 items-end">
-                                    <div className="flex-1">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold text-slate-800">Add Product</h3>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-sm font-medium text-primary-600 hover:text-primary-800 cursor-pointer bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100 flex items-center">
+                                            <span>📤 Import CSV</span>
+                                            <input type="file" accept=".csv" className="hidden" onChange={handleImportProducts} />
+                                        </label>
+                                    </div>
+                                </div>
+                                <form onSubmit={handleCreateProduct} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                    <div className="col-span-1 md:col-span-2">
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
                                         <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Potted Tulip" />
                                     </div>
-                                    <div className="w-32">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                                        <select className="form-input w-full rounded-lg border-slate-200" value={newProduct.category_id} onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}>
+                                            <option value="">Uncategorized</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Price ($)</label>
                                         <input type="number" step="0.01" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.price_cents} onChange={e => setNewProduct({ ...newProduct, price_cents: e.target.value })} placeholder="10.00" />
                                     </div>
-                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Add Product</button>
+                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 mt-2 col-span-1 md:col-span-4 lg:col-span-1">Add Product</button>
                                 </form>
                             </div>
                         )}
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-blue-800 text-sm flex items-start gap-3">
+                            <span className="text-xl leading-none">💡</span>
+                            <div>
+                                <strong>Did you link your products?</strong> After adding products here, you must go to the <strong>Campaigns</strong> tab and click <em>Manage Products</em> to explicitly add them to an active campaign so customers can see them.
+                            </div>
+                        </div>
 
                         {/* Product List */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -614,6 +706,57 @@ export default function OrganizationDashboard() {
                 {activeTab === 'users' && (
                     <UserManagement orgId={parseInt(id)} />
                 )}
+
+                {activeTab === 'categories' && (
+                    <div>
+                        {user?.role !== 'reader' && (
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                                <h3 className="text-lg font-semibold text-slate-800 mb-4">Add Category</h3>
+                                <form onSubmit={handleCreateCategory} className="flex gap-4 items-end">
+                                    <div className="flex-1">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Category Name</label>
+                                        <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={newCategory.name} onChange={e => setNewCategory({ ...newCategory, name: e.target.value })} placeholder="Indoor Plants" />
+                                    </div>
+                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700">Add Category</button>
+                                </form>
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <table className="min-w-full divide-y divide-slate-100">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Category Name</th>
+                                        <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {categories.map(c => (
+                                        <tr key={c.id}>
+                                            <td className="px-6 py-4 text-sm font-medium text-slate-900">{c.name}</td>
+                                            <td className="px-6 py-4 text-sm text-right">
+                                                {user?.role !== 'reader' && (
+                                                    <div className="flex justify-end gap-3 font-medium">
+                                                        <button onClick={() => setEditingCategory(c)} className="text-slate-400 hover:text-slate-600">✎ Edit</button>
+                                                        <button onClick={async () => {
+                                                            if (window.confirm('Delete category? Products in this category will become uncategorized.')) {
+                                                                await api.deleteCategory(c.id);
+                                                                fetchCategories();
+                                                            }
+                                                        }} className="text-red-300 hover:text-red-500">🗑</button>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {categories.length === 0 && (
+                                        <tr><td colSpan="2" className="px-6 py-8 text-center text-slate-500">No categories added yet.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Campaign Edit Modal */}
@@ -638,6 +781,27 @@ export default function OrganizationDashboard() {
                                     <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
                                     <input type="date" required className="w-full rounded-lg border-slate-200" value={editingCampaign.end_date} onChange={e => setEditingCampaign({ ...editingCampaign, end_date: e.target.value })} />
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Slug (URL)</label>
+                                    <input type="text" className="w-full rounded-lg border-slate-200" value={editingCampaign.slug || ''} onChange={e => setEditingCampaign({ ...editingCampaign, slug: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Catalog URL</label>
+                                    <input type="url" className="w-full rounded-lg border-slate-200" value={editingCampaign.catalog_url || ''} onChange={e => setEditingCampaign({ ...editingCampaign, catalog_url: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Header Text</label>
+                                <textarea className="w-full rounded-lg border-slate-200" rows="3" value={editingCampaign.header_text || ''} onChange={e => setEditingCampaign({ ...editingCampaign, header_text: e.target.value })} placeholder="Intro text..."></textarea>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Custom Email Text</label>
+                                <textarea className="w-full rounded-lg border-slate-200" rows="3" value={editingCampaign.custom_email_text || ''} onChange={e => setEditingCampaign({ ...editingCampaign, custom_email_text: e.target.value })} placeholder="Custom info in order email..."></textarea>
                             </div>
 
                             <div>
@@ -682,27 +846,48 @@ export default function OrganizationDashboard() {
                         <div className="p-6 overflow-y-auto">
                             {products.length === 0 ? (
                                 <p className="text-slate-500 text-center">No products in organization. Add some in the Products tab first.</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {products.map(p => {
-                                        const isLinked = selectedCampaign.products?.some(cp => cp.id === p.id);
-                                        return (
-                                            <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50">
-                                                <div>
-                                                    <div className="font-medium text-slate-900">{p.name}</div>
-                                                    <div className="text-xs text-slate-500">${(p.price_cents / 100).toFixed(2)}</div>
+                            ) : (() => {
+                                const grouped = products.reduce((acc, p) => {
+                                    const catName = categories.find(c => c.id === p.category_id)?.name || "Uncategorized";
+                                    if (!acc[catName]) acc[catName] = [];
+                                    acc[catName].push(p);
+                                    return acc;
+                                }, {});
+                                const sortedKeys = Object.keys(grouped).sort((a, b) => {
+                                    if (a === "Uncategorized") return 1;
+                                    if (b === "Uncategorized") return -1;
+                                    return a.localeCompare(b);
+                                });
+
+                                return (
+                                    <div className="space-y-6">
+                                        {sortedKeys.map(cat => (
+                                            <div key={cat}>
+                                                <h4 className="font-semibold text-slate-700 mb-2 border-b pb-1">{cat}</h4>
+                                                <div className="space-y-2">
+                                                    {grouped[cat].map(p => {
+                                                        const isLinked = selectedCampaign.products?.some(cp => cp.id === p.id);
+                                                        return (
+                                                            <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50">
+                                                                <div>
+                                                                    <div className="font-medium text-slate-900">{p.name}</div>
+                                                                    <div className="text-xs text-slate-500">${(p.price_cents / 100).toFixed(2)}</div>
+                                                                </div>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={!!isLinked}
+                                                                    onChange={(e) => toggleCampaignProduct(p.id, e.target.checked)}
+                                                                    className="h-5 w-5 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+                                                                />
+                                                            </div>
+                                                        )
+                                                    })}
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!!isLinked}
-                                                    onChange={(e) => toggleCampaignProduct(p.id, e.target.checked)}
-                                                    className="h-5 w-5 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
-                                                />
                                             </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                         </div>
                         <div className="p-6 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end">
                             <button onClick={() => setSelectedCampaign(null)} className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700">Done</button>
@@ -730,9 +915,18 @@ export default function OrganizationDashboard() {
                                     <input type="number" step="0.01" required className="w-full rounded-lg border-slate-200" value={editingProduct.price_dollars} onChange={e => setEditingProduct({ ...editingProduct, price_dollars: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Stock (-1 for UNLIMITED)</label>
-                                    <input type="number" required className="w-full rounded-lg border-slate-200" value={editingProduct.stock_quantity} onChange={e => setEditingProduct({ ...editingProduct, stock_quantity: e.target.value })} />
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                                    <select className="w-full rounded-lg border-slate-200" value={editingProduct.category_id || ''} onChange={e => setEditingProduct({ ...editingProduct, category_id: e.target.value })}>
+                                        <option value="">Uncategorized</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Stock (-1 for UNLIMITED)</label>
+                                <input type="number" required className="w-full rounded-lg border-slate-200" value={editingProduct.stock_quantity} onChange={e => setEditingProduct({ ...editingProduct, stock_quantity: e.target.value })} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
@@ -741,6 +935,37 @@ export default function OrganizationDashboard() {
 
                             <div className="flex justify-end gap-3 pt-4">
                                 <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
+                                <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Editing Category Modal */}
+            {editingCategory && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-slate-900">Edit Category</h3>
+                            <button onClick={() => setEditingCategory(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                        </div>
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            try {
+                                await api.updateCategory(editingCategory.id, editingCategory);
+                                setEditingCategory(null);
+                                fetchCategories();
+                            } catch (err) {
+                                alert("Failed to update category");
+                            }
+                        }} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                                <input type="text" required className="w-full rounded-lg border-slate-200" value={editingCategory.name} onChange={e => setEditingCategory({ ...editingCategory, name: e.target.value })} />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setEditingCategory(null)} className="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium">Cancel</button>
                                 <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium">Save Changes</button>
                             </div>
                         </form>

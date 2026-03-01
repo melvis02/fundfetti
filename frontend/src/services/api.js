@@ -63,6 +63,45 @@ export const api = {
         if (!res.ok) throw new Error('Failed to update product');
         return res.json();
     },
+    importProducts: async (orgId, file) => {
+        const formData = new FormData();
+        formData.append('products_csv', file);
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/products/import`, {
+            method: 'POST',
+            body: formData, // No Content-Type header so browser sets multipart/form-data with boundary
+        });
+        if (!res.ok) throw new Error('Failed to import products');
+        return res.json();
+    },
+
+    // Categories (Scoped)
+    getOrgCategories: async (orgId) => {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/categories`);
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        return res.json();
+    },
+    createCategory: async (orgId, category) => {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/categories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(category),
+        });
+        if (!res.ok) throw new Error('Failed to create category');
+        return res.json();
+    },
+    updateCategory: async (id, category) => {
+        const res = await fetch(`${API_BASE}/categories/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(category),
+        });
+        if (!res.ok) throw new Error('Failed to update category');
+        return res.json();
+    },
+    deleteCategory: async (id) => {
+        const res = await fetch(`${API_BASE}/categories/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete category');
+    },
 
     // Campaigns (Scoped)
     getOrgCampaigns: async (orgId) => {
@@ -114,6 +153,11 @@ export const api = {
     getCampaignPublic: async (id) => {
         // Using existing endpoint as it returns products too
         const res = await fetch(`${API_BASE}/campaigns/${id}`);
+        if (!res.ok) throw new Error('Failed to fetch campaign');
+        return res.json();
+    },
+    getCampaignBySlug: async (orgSlug, campaignSlug) => {
+        const res = await fetch(`${API_BASE}/public/campaigns/${orgSlug}/${campaignSlug}`);
         if (!res.ok) throw new Error('Failed to fetch campaign');
         return res.json();
     },

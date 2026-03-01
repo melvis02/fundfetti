@@ -99,16 +99,27 @@ func InitDB(driverName, dataSourceName string) error {
 		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE SET NULL
 	);`, primaryKeyDef)
 
+	createCategoriesTable := fmt.Sprintf(`
+	CREATE TABLE IF NOT EXISTS categories (
+		id %s,
+		organization_id INTEGER,
+		name TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+	);`, primaryKeyDef)
+
 	createProductsTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS products (
 		id %s,
 		organization_id INTEGER,
+		category_id INTEGER,
 		name TEXT NOT NULL,
 		description TEXT,
 		price_cents INTEGER DEFAULT 0,
 		image_url TEXT,
 		stock_quantity INTEGER DEFAULT -1,
-		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+		FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL
 	);`, primaryKeyDef)
 
 	createCampaignsTable := fmt.Sprintf(`
@@ -140,6 +151,7 @@ func InitDB(driverName, dataSourceName string) error {
 		createOrderItemsTable,
 		createOrganizationsTable,
 		createUsersTable,
+		createCategoriesTable,
 		createProductsTable,
 		createCampaignsTable,
 		createCampaignProductsTable,
@@ -189,6 +201,15 @@ func InitDB(driverName, dataSourceName string) error {
 
 	// Campaigns: order_email_cc
 	ignoreErr(addColumn(driverName, "campaigns", "order_email_cc", "TEXT"))
+
+	// Products: category_id
+	ignoreErr(addColumn(driverName, "products", "category_id", "INTEGER"))
+
+	// Campaigns: New Feature Columns
+	ignoreErr(addColumn(driverName, "campaigns", "catalog_url", "TEXT"))
+	ignoreErr(addColumn(driverName, "campaigns", "custom_email_text", "TEXT"))
+	ignoreErr(addColumn(driverName, "campaigns", "header_text", "TEXT"))
+	ignoreErr(addColumn(driverName, "campaigns", "slug", "TEXT"))
 
 	return nil
 }
@@ -314,6 +335,8 @@ type Organization struct {
 type Product struct {
 	ID             int64  `json:"id"`
 	OrganizationID int64  `json:"organization_id"`
+	CategoryID     *int64 `json:"category_id"`
+	CategoryName   string `json:"category_name,omitempty"`
 	Name           string `json:"name"`
 	Description    string `json:"description"`
 	PriceCents     int    `json:"price_cents"`
@@ -332,8 +355,13 @@ type Campaign struct {
 	Instructions                string    `json:"instructions"`
 	OrderEmailCC                string    `json:"order_email_cc"`
 	IsActive                    bool      `json:"is_active"`
+	CatalogURL                  string    `json:"catalog_url"`
+	CustomEmailText             string    `json:"custom_email_text"`
+	HeaderText                  string    `json:"header_text"`
+	Slug                        string    `json:"slug"`
 	OrganizationName            string    `json:"organization_name,omitempty"`
 	OrganizationPaymentMetadata string    `json:"organization_payment_metadata,omitempty"`
+	OrganizationSlug            string    `json:"organization_slug,omitempty"`
 	Products                    []Product `json:"products,omitempty"`
 }
 

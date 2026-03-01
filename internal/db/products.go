@@ -6,18 +6,18 @@ import (
 )
 
 func CreateProduct(p Product) (int64, error) {
-	query := "INSERT INTO products (organization_id, name, description, price_cents, image_url, stock_quantity) VALUES (?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO products (organization_id, category_id, name, description, price_cents, image_url, stock_quantity) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
 	if currentDriver == "postgres" {
 		var id int64
-		err := DB.QueryRow(Rebind(query+" RETURNING id"), p.OrganizationID, p.Name, p.Description, p.PriceCents, p.ImageURL, p.StockQuantity).Scan(&id)
+		err := DB.QueryRow(Rebind(query+" RETURNING id"), p.OrganizationID, p.CategoryID, p.Name, p.Description, p.PriceCents, p.ImageURL, p.StockQuantity).Scan(&id)
 		if err != nil {
 			return 0, fmt.Errorf("failed to insert product: %w", err)
 		}
 		return id, nil
 	}
 
-	res, err := DB.Exec(query, p.OrganizationID, p.Name, p.Description, p.PriceCents, p.ImageURL, p.StockQuantity)
+	res, err := DB.Exec(query, p.OrganizationID, p.CategoryID, p.Name, p.Description, p.PriceCents, p.ImageURL, p.StockQuantity)
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute insert product: %w", err)
 	}
@@ -27,8 +27,8 @@ func CreateProduct(p Product) (int64, error) {
 
 func GetProduct(id int64) (*Product, error) {
 	var p Product
-	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE id = ?"), id).
-		Scan(&p.ID, &p.OrganizationID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity)
+	err := DB.QueryRow(Rebind("SELECT id, organization_id, category_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE id = ?"), id).
+		Scan(&p.ID, &p.OrganizationID, &p.CategoryID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Not found
@@ -39,7 +39,7 @@ func GetProduct(id int64) (*Product, error) {
 }
 
 func GetOrganizationProducts(orgID int64) ([]Product, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE organization_id = ? ORDER BY name ASC"), orgID)
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, category_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE organization_id = ? ORDER BY name ASC"), orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query products: %w", err)
 	}
@@ -48,7 +48,7 @@ func GetOrganizationProducts(orgID int64) ([]Product, error) {
 	products := []Product{}
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.CategoryID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity); err != nil {
 			return nil, fmt.Errorf("failed to scan product: %w", err)
 		}
 		products = append(products, p)
@@ -58,7 +58,7 @@ func GetOrganizationProducts(orgID int64) ([]Product, error) {
 
 // Deprecated: Use GetOrganizationProducts
 func GetAllProducts() ([]Product, error) {
-	rows, err := DB.Query(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products ORDER BY name ASC"))
+	rows, err := DB.Query(Rebind("SELECT id, organization_id, category_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products ORDER BY name ASC"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query products: %w", err)
 	}
@@ -67,7 +67,7 @@ func GetAllProducts() ([]Product, error) {
 	products := []Product{}
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.CategoryID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity); err != nil {
 			return nil, fmt.Errorf("failed to scan product: %w", err)
 		}
 		products = append(products, p)
@@ -76,7 +76,7 @@ func GetAllProducts() ([]Product, error) {
 }
 
 func UpdateProduct(p Product) error {
-	_, err := DB.Exec(Rebind("UPDATE products SET name = ?, description = ?, price_cents = ?, image_url = ?, stock_quantity = ? WHERE id = ?"), p.Name, p.Description, p.PriceCents, p.ImageURL, p.StockQuantity, p.ID)
+	_, err := DB.Exec(Rebind("UPDATE products SET category_id = ?, name = ?, description = ?, price_cents = ?, image_url = ?, stock_quantity = ? WHERE id = ?"), p.CategoryID, p.Name, p.Description, p.PriceCents, p.ImageURL, p.StockQuantity, p.ID)
 	return err
 }
 
@@ -87,8 +87,8 @@ func DeleteProduct(id int64) error {
 
 func GetProductByName(orgID int64, name string) (*Product, error) {
 	var p Product
-	err := DB.QueryRow(Rebind("SELECT id, organization_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE organization_id = ? AND name = ?"), orgID, name).
-		Scan(&p.ID, &p.OrganizationID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity)
+	err := DB.QueryRow(Rebind("SELECT id, organization_id, category_id, name, COALESCE(description, ''), price_cents, COALESCE(image_url, ''), stock_quantity FROM products WHERE organization_id = ? AND name = ?"), orgID, name).
+		Scan(&p.ID, &p.OrganizationID, &p.CategoryID, &p.Name, &p.Description, &p.PriceCents, &p.ImageURL, &p.StockQuantity)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Not found
