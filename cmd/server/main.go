@@ -61,6 +61,7 @@ func StartServer() {
 	// Protected Admin Routes
 	adminRouter := router.PathPrefix("/api").Subrouter()
 	adminRouter.Use(auth.AuthMiddleware)
+	adminRouter.Use(auth.BlockReaderMutations)
 
 	// Admin: Orders
 	adminRouter.HandleFunc("/orders", getOrdersHandler).Methods("GET")
@@ -75,7 +76,7 @@ func StartServer() {
 
 	// Admin: Organizations
 	adminRouter.HandleFunc("/organizations", listOrganizationsHandler).Methods("GET")
-	adminRouter.HandleFunc("/organizations", createOrganizationHandler).Methods("POST")
+	adminRouter.Handle("/organizations", auth.RequireRole("global_admin")(http.HandlerFunc(createOrganizationHandler))).Methods("POST")
 	adminRouter.HandleFunc("/organizations/{id}", getOrganizationHandler).Methods("GET")
 	adminRouter.HandleFunc("/organizations/{id}", updateOrganizationHandler).Methods("PUT")
 	adminRouter.HandleFunc("/organizations/{id}", deleteOrganizationHandler).Methods("DELETE")

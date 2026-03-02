@@ -13,6 +13,30 @@ import (
 	"github.com/melvis02/fundfetti/internal/ordersheets"
 )
 
+// -- Helpers --
+
+func verifyTenant(r *http.Request, resourceOrgID int64) bool {
+	role, _ := r.Context().Value("role").(string)
+	if role == "global_admin" {
+		return true
+	}
+	userOrgID, ok := r.Context().Value("org_id").(int64)
+	if !ok {
+		return false
+	}
+	return userOrgID == resourceOrgID
+}
+
+func sanitizeCampaign(r *http.Request, c *db.Campaign) {
+	if c == nil {
+		return
+	}
+	if !verifyTenant(r, c.OrganizationID) {
+		c.OrderEmailCC = ""
+		c.CustomEmailText = ""
+	}
+}
+
 // -- Orders --
 
 func createOrderHandler(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +101,20 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 // -- Organizations --
 
 func listOrganizationsHandler(w http.ResponseWriter, r *http.Request) {
+	role, _ := r.Context().Value("role").(string)
+	if role != "global_admin" {
+		userOrgID, ok := r.Context().Value("org_id").(int64)
+		if !ok {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		org, _ := db.GetOrganization(userOrgID)
+		if org != nil {
+			json.NewEncoder(w).Encode([]db.Organization{*org})
+			return
+		}
+	}
+
 	orgs, err := db.GetAllOrganizations()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -88,6 +126,12 @@ func listOrganizationsHandler(w http.ResponseWriter, r *http.Request) {
 func getOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	if !verifyTenant(r, id) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	org, err := db.GetOrganization(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,6 +162,12 @@ func createOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 func updateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	if !verifyTenant(r, id) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	var org db.Organization
 	if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
@@ -134,6 +184,12 @@ func updateOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 func deleteOrganizationHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	if !verifyTenant(r, id) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	if err := db.DeleteOrganization(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -148,6 +204,11 @@ func listProductsHandler(w http.ResponseWriter, r *http.Request) {
 	// If org_id is present, filter by it
 	if orgIDStr, ok := vars["org_id"]; ok {
 		orgID, _ := strconv.ParseInt(orgIDStr, 10, 64)
+		if !verifyTenant(r, orgID) {
+			http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+			return
+		}
+
 		products, err := db.GetOrganizationProducts(orgID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -157,7 +218,13 @@ func listProductsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fallback to all (admin)
+	// Fallback to all (global admin only)
+	role, _ := r.Context().Value("role").(string)
+	if role != "global_admin" {
+		http.Error(w, "Forbidden - Global Admin Required", http.StatusForbidden)
+		return
+	}
+
 	products, err := db.GetAllProducts()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -178,6 +245,10 @@ func getProductHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
+	if !verifyTenant(r, product.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
 	json.NewEncoder(w).Encode(product)
 }
 
@@ -195,6 +266,11 @@ func createProductHandler(w http.ResponseWriter, r *http.Request) {
 		p.OrganizationID = orgID
 	}
 
+	if !verifyTenant(r, p.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	id, err := db.CreateProduct(p)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -207,12 +283,25 @@ func createProductHandler(w http.ResponseWriter, r *http.Request) {
 func updateProductHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	existing, err := db.GetProduct(id)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	var p db.Product
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
 	p.ID = id
+	p.OrganizationID = existing.OrganizationID // Prevent moving across organizations
+
 	if err := db.UpdateProduct(p); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -223,6 +312,17 @@ func updateProductHandler(w http.ResponseWriter, r *http.Request) {
 func deleteProductHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	existing, err := db.GetProduct(id)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	if err := db.DeleteProduct(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -236,10 +336,17 @@ func listCampaignsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if orgIDStr, ok := vars["org_id"]; ok {
 		orgID, _ := strconv.ParseInt(orgIDStr, 10, 64)
+		if !verifyTenant(r, orgID) {
+			http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+			return
+		}
 		campaigns, err := db.GetOrganizationCampaigns(orgID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		for i := range campaigns {
+			sanitizeCampaign(r, &campaigns[i])
 		}
 		json.NewEncoder(w).Encode(campaigns)
 		return
@@ -250,6 +357,9 @@ func listCampaignsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	for i := range campaigns {
+		sanitizeCampaign(r, &campaigns[i])
 	}
 	json.NewEncoder(w).Encode(campaigns)
 }
@@ -266,6 +376,7 @@ func getCampaignHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
+	sanitizeCampaign(r, campaign)
 	json.NewEncoder(w).Encode(campaign)
 }
 
@@ -283,6 +394,7 @@ func getCampaignBySlugHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
+	sanitizeCampaign(r, campaign)
 	json.NewEncoder(w).Encode(campaign)
 }
 
@@ -299,6 +411,11 @@ func createCampaignHandler(w http.ResponseWriter, r *http.Request) {
 		c.OrganizationID = orgID
 	}
 
+	if !verifyTenant(r, c.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	id, err := db.CreateCampaign(c)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -311,12 +428,25 @@ func createCampaignHandler(w http.ResponseWriter, r *http.Request) {
 func updateCampaignHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	existing, err := db.GetCampaign(id)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	var c db.Campaign
 	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
 	c.ID = id
+	c.OrganizationID = existing.OrganizationID
+
 	if err := db.UpdateCampaign(c); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -327,6 +457,17 @@ func updateCampaignHandler(w http.ResponseWriter, r *http.Request) {
 func deleteCampaignHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	existing, err := db.GetCampaign(id)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	if err := db.DeleteCampaign(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -337,6 +478,17 @@ func deleteCampaignHandler(w http.ResponseWriter, r *http.Request) {
 func addCampaignProductHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	campaignID, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	existing, err := db.GetCampaign(campaignID)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	var req struct {
 		ProductID int64 `json:"product_id"`
 	}
@@ -356,6 +508,16 @@ func removeCampaignProductHandler(w http.ResponseWriter, r *http.Request) {
 	campaignID, _ := strconv.ParseInt(vars["id"], 10, 64)
 	productID, _ := strconv.ParseInt(vars["product_id"], 10, 64)
 
+	existing, err := db.GetCampaign(campaignID)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	if err := db.RemoveProductFromCampaign(campaignID, productID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -368,6 +530,10 @@ func removeCampaignProductHandler(w http.ResponseWriter, r *http.Request) {
 func listCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	orgID, _ := strconv.ParseInt(vars["org_id"], 10, 64)
+	if !verifyTenant(r, orgID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
 	categories, err := db.GetOrganizationCategories(orgID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -379,6 +545,10 @@ func listCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 func createCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	orgID, _ := strconv.ParseInt(vars["org_id"], 10, 64)
+	if !verifyTenant(r, orgID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
 
 	var c db.Category
 	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
@@ -399,12 +569,25 @@ func createCategoryHandler(w http.ResponseWriter, r *http.Request) {
 func updateCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	existing, err := db.GetCategory(id)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	var c db.Category
 	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
 	c.ID = id
+	c.OrganizationID = existing.OrganizationID
+
 	if err := db.UpdateCategory(c); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -415,6 +598,17 @@ func updateCategoryHandler(w http.ResponseWriter, r *http.Request) {
 func deleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.ParseInt(vars["id"], 10, 64)
+
+	existing, err := db.GetCategory(id)
+	if err != nil || existing == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if !verifyTenant(r, existing.OrganizationID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	if err := db.DeleteCategory(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -427,6 +621,11 @@ func deleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
 func importProductsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	orgID, _ := strconv.ParseInt(vars["org_id"], 10, 64)
+
+	if !verifyTenant(r, orgID) {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
 
 	file, _, err := r.FormFile("products_csv")
 	if err != nil {

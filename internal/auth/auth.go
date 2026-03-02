@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 
@@ -19,7 +20,7 @@ var (
 func init() {
 	key := os.Getenv("SESSION_KEY")
 	if key == "" {
-		key = "super-secret-key-that-is-32-bytes-long!"
+		log.Fatal("SESSION_KEY environment variable is required")
 	}
 	store = sessions.NewCookieStore([]byte(key))
 
@@ -74,6 +75,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "session")
 	session.Values["user_id"] = user.ID
 	session.Values["role"] = user.Role
+	if user.OrganizationID != nil {
+		session.Values["org_id"] = *user.OrganizationID
+	}
 	session.Save(r, w)
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -91,6 +95,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "session")
 	session.Values["user_id"] = nil
 	session.Values["role"] = nil
+	session.Values["org_id"] = nil
 	session.Options.MaxAge = -1
 	session.Save(r, w)
 	w.WriteHeader(http.StatusOK)
@@ -129,6 +134,51 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), "user_id", userID)
+
+		if role, ok := session.Values["role"].(string); ok {
+			ctx = context.WithValue(ctx, "role", role)
+		}
+
+		if orgID, ok := session.Values["org_id"].(int64); ok {
+			ctx = context.WithValue(ctx, "org_id", orgID)
+		}
+
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// RequireRole enforces role-based access control on routes
+func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			role, ok := r.Context().Value("role").(string)
+			if !ok {
+				http.Error(w, "Forbidden - Role not found in context", http.StatusForbidden)
+				return
+			}
+
+			for _, allowed := range allowedRoles {
+				if role == allowed {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
+			http.Error(w, "Forbidden - Insufficient Role Permissions", http.StatusForbidden)
+		})
+	}
+}
+
+// BlockReaderMutations ensures that users with the 'reader' role cannot make state-mutating requests
+func BlockReaderMutations(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
+			role, ok := r.Context().Value("role").(string)
+			if ok && role == "reader" {
+				http.Error(w, "Forbidden - Readers cannot modify data", http.StatusForbidden)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
 	})
 }
