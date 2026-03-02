@@ -1013,6 +1013,45 @@ export default function OrganizationDashboard() {
                     </div>
                 </div>
             )}
+            {/* Help Modal */}
+            {helpModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-slate-900">How to Launch a Campaign</h3>
+                            <button onClick={() => setHelpModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                        </div>
+
+                        <div className="space-y-6 text-slate-600">
+                            <div>
+                                <h4 className="font-semibold text-slate-800 text-lg mb-2">1. Create Categories</h4>
+                                <p className="text-sm">Start by setting up logical groupings for your products (e.g., "Indoor Plants", "Succulents"). Go to the <strong>Categories</strong> tab to add them first.</p>
+                            </div>
+
+                            <div>
+                                <h4 className="font-semibold text-slate-800 text-lg mb-2">2. Add Products</h4>
+                                <p className="text-sm mb-2">Navigate to the <strong>Products</strong> tab to add inventory. When creating products, assign them to the categories you just created.</p>
+                                <p className="text-sm"><em>Tip: Use the CSV Importer if you have lots of items! Note that CSV imports will be "Uncategorized" by default until you edit them.</em></p>
+                            </div>
+
+                            <div>
+                                <h4 className="font-semibold text-slate-800 text-lg mb-2">3. Create the Campaign</h4>
+                                <p className="text-sm">Go to the <strong>Campaigns</strong> tab and launch a new campaign. Give it a friendly URL (e.g. <code>spring-sale</code>) so your link looks like <code>fundfetti.org/c/your-org/spring-sale</code>.</p>
+                            </div>
+
+                            <div>
+                                <h4 className="font-semibold text-slate-800 text-lg mb-2">4. Link Products to Campaign</h4>
+                                <p className="text-sm font-medium text-red-600 mb-1">Important: Products are not visible by default!</p>
+                                <p className="text-sm">In the <strong>Campaigns</strong> tab, click <em>Manage Products</em> on your active campaign. Check the boxes next to all products you want visible to buyers for this specific sale.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-6 mt-6 border-t border-slate-100">
+                            <button onClick={() => setHelpModalOpen(false)} className="bg-primary-600 text-white px-5 py-2.5 rounded-lg hover:bg-primary-700 font-medium">Got it!</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
