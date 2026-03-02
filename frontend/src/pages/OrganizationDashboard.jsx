@@ -139,6 +139,7 @@ export default function OrganizationDashboard() {
     };
 
     const [selectedCampaign, setSelectedCampaign] = useState(null);
+    const [helpModalOpen, setHelpModalOpen] = useState(false);
 
     const toggleCampaignProduct = async (productId, isLinked) => {
         if (!selectedCampaign) return;
@@ -329,9 +330,14 @@ export default function OrganizationDashboard() {
                             </div>
                             <div className="text-sm text-slate-500 mt-1">Dashboard • {org.contact_email}</div>
                         </div>
-                        <Link to="/admin/organizations" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
-                            ← All Organizations
-                        </Link>
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setHelpModalOpen(true)} className="text-slate-500 hover:text-slate-700 font-medium text-sm flex items-center gap-1">
+                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-xs">?</span> Help
+                            </button>
+                            <Link to="/admin/organizations" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                                ← All Organizations
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -341,13 +347,13 @@ export default function OrganizationDashboard() {
                 <div className="border-b border-slate-200 mb-6">
                     <nav className="-mb-px flex space-x-8">
                         <button
-                            onClick={() => setActiveTab('campaigns')}
-                            className={`${activeTab === 'campaigns'
+                            onClick={() => setActiveTab('categories')}
+                            className={`${activeTab === 'categories'
                                 ? 'border-primary-500 text-primary-600'
                                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                            Campaigns
+                            Categories
                         </button>
                         <button
                             onClick={() => setActiveTab('products')}
@@ -359,13 +365,13 @@ export default function OrganizationDashboard() {
                             Products
                         </button>
                         <button
-                            onClick={() => setActiveTab('orders')}
-                            className={`${activeTab === 'orders'
+                            onClick={() => setActiveTab('campaigns')}
+                            className={`${activeTab === 'campaigns'
                                 ? 'border-primary-500 text-primary-600'
                                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                            Orders
+                            Campaigns
                         </button>
                         <button
                             onClick={() => setActiveTab('users')}
@@ -377,13 +383,13 @@ export default function OrganizationDashboard() {
                             Users
                         </button>
                         <button
-                            onClick={() => setActiveTab('categories')}
-                            className={`${activeTab === 'categories'
+                            onClick={() => setActiveTab('orders')}
+                            className={`${activeTab === 'orders'
                                 ? 'border-primary-500 text-primary-600'
                                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
-                            Categories
+                            Orders
                         </button>
                     </nav>
                 </div>

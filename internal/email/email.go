@@ -62,6 +62,7 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 	<html>
 	<body>
 		<h2>Thank you for your order, %s!</h2>
+		<p style="color: #64748b; font-size: 14px; margin-top: -10px;">Supporting %s</p>
 		%s
 		%s
 		<p>You have successfully placed an order for <strong>%s</strong>.</p>
@@ -77,10 +78,10 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 			<p style="white-space: pre-wrap;">%s</p>
 		</div>
 
-		<p>If you have any questions, please reply to this email or contact us.</p>
+		<p>If you have any questions, please reply to this email to contact the organizing member.</p>
 	</body>
 	</html>
-	`, order.Name, headerInjection, customBodyInjection, campaign.Name, itemsList.String(), total, paymentInfo)
+	`, order.Name, org.Name, headerInjection, customBodyInjection, campaign.Name, itemsList.String(), total, paymentInfo)
 
 	// Determine sender email - try to use a verified domain if we knew it, or default
 	// For Resend, user must verify domain. We'll use a standard one for now or env var.
