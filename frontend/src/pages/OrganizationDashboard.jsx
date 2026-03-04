@@ -699,7 +699,24 @@ export default function OrganizationDashboard() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-right">
-
+                                                    {user?.role !== 'reader' && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (window.confirm('Are you sure you want to delete this order? This cannot be undone.')) {
+                                                                    try {
+                                                                        await api.deleteOrder(order.ID);
+                                                                        fetchOrders();
+                                                                    } catch (e) {
+                                                                        alert("Failed to delete order");
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="text-red-300 hover:text-red-500"
+                                                            title="Delete Order"
+                                                        >
+                                                            🗑
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))

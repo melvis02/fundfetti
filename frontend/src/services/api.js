@@ -184,6 +184,10 @@ export const api = {
         if (!res.ok) throw new Error('Failed to submit order');
         return res.json();
     },
+    deleteOrder: async (id) => {
+        const res = await fetch(`${API_BASE}/orders/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete order');
+    },
 
     // Users
     getUsers: async (orgId = null) => {

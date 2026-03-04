@@ -20,36 +20,33 @@ export default function AdminLayout() {
             {/* Top Navigation Bar */}
             <nav className="bg-slate-800 text-white shadow-md">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-between h-16">
+                    <div className="flex flex-col md:flex-row items-center justify-between py-3 gap-4 md:gap-0 min-h-[4rem]">
                         {/* Left: Brand & Primary Nav */}
-                        <div className="flex items-center gap-8">
+                        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 w-full md:w-auto">
                             <div className="flex-shrink-0">
                                 <span className="text-xl font-bold tracking-tight">🎉 Fundfetti Admin</span>
                             </div>
-                            <div className="hidden md:block">
-                                <div className="flex items-baseline space-x-4">
-
-                                    {currentOrg && (
-                                        <Link to={`/admin/organizations/${currentOrg.id}`} className={navClass(`/admin/organizations/${currentOrg.id}`)}>
-                                            Current Org ({currentOrg.slug})
-                                        </Link>
-                                    )}
-                                    {user?.role === 'global_admin' && (
-                                        <>
-                                            <Link to="/admin/organizations" className={navClass('/admin/organizations')}>All Orgs</Link>
-                                            <Link to="/admin/users" className={navClass('/admin/users')}>Users</Link>
-                                        </>
-                                    )}
-                                </div>
+                            <div className="flex flex-wrap justify-center gap-2">
+                                {currentOrg && (
+                                    <Link to={`/admin/organizations/${currentOrg.id}`} className={navClass(`/admin/organizations/${currentOrg.id}`)}>
+                                        Current Org ({currentOrg.slug})
+                                    </Link>
+                                )}
+                                {user?.role === 'global_admin' && (
+                                    <>
+                                        <Link to="/admin/organizations" className={navClass('/admin/organizations')}>All Orgs</Link>
+                                        <Link to="/admin/users" className={navClass('/admin/users')}>Users</Link>
+                                    </>
+                                )}
                             </div>
                         </div>
 
                         {/* Right: Org Switcher & User Profile */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center justify-center gap-4 w-full md:w-auto">
                             {orgs.length > 0 && user?.role === 'global_admin' ? (
                                 <div className="relative">
                                     <select
-                                        className="appearance-none bg-slate-700 border border-slate-600 text-white py-1.5 pl-3 pr-8 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                                        className="appearance-none bg-slate-700 border border-slate-600 text-white py-1.5 pl-3 pr-8 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500 max-w-[200px] truncate"
                                         value={currentOrg?.id || ''}
                                         onChange={(e) => {
                                             const selected = orgs.find(o => o.id === parseInt(e.target.value));
@@ -68,7 +65,7 @@ export default function AdminLayout() {
                                 <span className="text-sm text-slate-400">No Orgs Found</span>
                             )}
                             <div className="flex items-center gap-3 pl-4 border-l border-slate-700">
-                                <div className="text-xs text-right hidden sm:block">
+                                <div className="text-xs text-right hidden lg:block">
                                     <div className="font-medium text-white">{user?.email}</div>
                                     <div className="text-slate-400 capitalize">{user?.role?.replace('_', ' ')}</div>
                                 </div>
