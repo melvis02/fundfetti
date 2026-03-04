@@ -444,3 +444,8 @@ func UpdateOrderStatus(id int64, pickedUp, paid bool) error {
 	_, err := DB.Exec(Rebind("UPDATE orders SET picked_up = ?, paid = ? WHERE id = ?"), pickedUp, paid, id)
 	return err
 }
+
+func DeleteOrder(id int64) error {
+	_, err := DB.Exec(Rebind("DELETE FROM orders WHERE id = ?"), id)
+	return err
+}

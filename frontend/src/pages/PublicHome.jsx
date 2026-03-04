@@ -45,9 +45,6 @@ export default function PublicHome() {
                         Support your local schools, clubs, and organizations by purchasing items directly from their fundraisers.
                         Find an active fundraiser below to get started.
                     </p>
-                    <a href="#campaigns" className="inline-block bg-white text-teal-700 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-teal-50 hover:shadow-xl transition-all transform hover:-translate-y-1">
-                        Find a Fundraiser
-                    </a>
                 </div>
             </div>
 

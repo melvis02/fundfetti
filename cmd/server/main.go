@@ -65,6 +65,7 @@ func StartServer() {
 
 	// Admin: Orders
 	adminRouter.HandleFunc("/orders", getOrdersHandler).Methods("GET")
+	adminRouter.HandleFunc("/orders/{id}", deleteOrderHandler).Methods("DELETE")
 	adminRouter.HandleFunc("/upload", uploadHandler).Methods("POST")
 	adminRouter.HandleFunc("/orders/{id}/status", orderStatusHandler).Methods("POST")
 
@@ -314,6 +315,24 @@ func orderStatusHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := db.UpdateOrderStatus(id, req.PickedUp, req.Paid); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to update order: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func deleteOrderHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	idStr := vars["id"]
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid Order ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := db.DeleteOrder(id); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to delete order: %v", err), http.StatusInternalServerError)
 		return
 	}
 

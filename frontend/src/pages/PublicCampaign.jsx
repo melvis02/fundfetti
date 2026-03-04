@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../services/api';
 
+const renderTextWithLinks = (text) => {
+    if (!text) return null;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.split(urlRegex).map((part, i) => {
+        if (part.match(urlRegex)) {
+            return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600 font-medium">{part}</a>;
+        }
+        return part;
+    });
+};
+
 export default function PublicCampaign() {
     const { id, orgSlug, campaignSlug } = useParams();
     const [campaign, setCampaign] = useState(null);
@@ -95,31 +106,35 @@ export default function PublicCampaign() {
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
             {/* Header / Hero */}
             <div className="bg-white shadow-sm border-b border-slate-200">
-                <div className="container mx-auto px-6 py-6 text-center max-w-2xl relative">
-                    <Link to="/" className="absolute left-6 top-6 text-slate-400 hover:text-slate-600 font-medium text-sm flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                        All Fundraisers
-                    </Link>
-                    {campaign.organization_name && (
-                        <div className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-2">{campaign.organization_name}</div>
-                    )}
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">{campaign.name}</h1>
-                    <p className="text-slate-500 mb-4">{campaign.description || "Support our fundraiser by ordering below!"}</p>
-                    {campaign.catalog_url && (
-                        <div className="mb-4">
-                            <a href={campaign.catalog_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium">
-                                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                                View Product Catalog
-                            </a>
-                        </div>
-                    )}
-                    {step < 4 && (
-                        <div className="flex justify-center mt-6 space-x-2">
-                            <div className={`h-2 w-12 rounded-full ${step >= 1 ? 'bg-primary-600' : 'bg-slate-200'}`}></div>
-                            <div className={`h-2 w-12 rounded-full ${step >= 2 ? 'bg-primary-600' : 'bg-slate-200'}`}></div>
-                            <div className={`h-2 w-12 rounded-full ${step >= 3 ? 'bg-primary-600' : 'bg-slate-200'}`}></div>
-                        </div>
-                    )}
+                <div className="container mx-auto px-6 py-6 max-w-2xl">
+                    <div className="flex w-full justify-start mb-4 md:mb-0 md:absolute md:left-6 md:top-6">
+                        <Link to="/" className="text-slate-400 hover:text-slate-600 font-medium text-sm flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            All Fundraisers
+                        </Link>
+                    </div>
+                    <div className="text-center md:mt-0 relative">
+                        {campaign.organization_name && (
+                            <div className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-2">{campaign.organization_name}</div>
+                        )}
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">{campaign.name}</h1>
+                        <p className="text-slate-500 mb-4">{campaign.description || "Support our fundraiser by ordering below!"}</p>
+                        {campaign.catalog_url && (
+                            <div className="mb-4">
+                                <a href={campaign.catalog_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium">
+                                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                    View Product Catalog
+                                </a>
+                            </div>
+                        )}
+                        {step < 4 && (
+                            <div className="flex justify-center mt-6 space-x-2">
+                                <div className={`h-2 w-12 rounded-full ${step >= 1 ? 'bg-primary-600' : 'bg-slate-200'}`}></div>
+                                <div className={`h-2 w-12 rounded-full ${step >= 2 ? 'bg-primary-600' : 'bg-slate-200'}`}></div>
+                                <div className={`h-2 w-12 rounded-full ${step >= 3 ? 'bg-primary-600' : 'bg-slate-200'}`}></div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -269,7 +284,7 @@ export default function PublicCampaign() {
                         {(campaign.payment_metadata || campaign.organization_payment_metadata) && (
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-left max-w-sm mx-auto mb-8">
                                 <h3 className="font-semibold text-blue-900 mb-2 text-sm uppercase tracking-wide">Payment Instructions</h3>
-                                <p className="text-blue-800 text-sm whitespace-pre-wrap">{campaign.payment_metadata || campaign.organization_payment_metadata}</p>
+                                <p className="text-blue-800 text-sm whitespace-pre-wrap">{renderTextWithLinks(campaign.payment_metadata || campaign.organization_payment_metadata)}</p>
                             </div>
                         )}
 
