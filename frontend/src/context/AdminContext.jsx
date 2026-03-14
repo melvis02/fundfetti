@@ -14,9 +14,16 @@ export function AdminProvider({ children }) {
             try {
                 const data = await api.getOrganizations();
                 setOrgs(data || []);
-                // Default to first org if available and none selected
+                // Default to saved org or first org if available and none selected
                 if (data && data.length > 0) {
-                    // TODO: Persist selection in localStorage
+                    const savedOrgId = localStorage.getItem('fundfetti_admin_org_id');
+                    if (savedOrgId) {
+                        const saved = data.find(o => o.id.toString() === savedOrgId);
+                        if (saved) {
+                            setCurrentOrg(saved);
+                            return;
+                        }
+                    }
                     setCurrentOrg(data[0]);
                 }
             } catch (e) {
@@ -31,7 +38,14 @@ export function AdminProvider({ children }) {
     const value = {
         orgs,
         currentOrg,
-        setCurrentOrg,
+        setCurrentOrg: (org) => {
+            setCurrentOrg(org);
+            if (org) {
+                localStorage.setItem('fundfetti_admin_org_id', org.id.toString());
+            } else {
+                localStorage.removeItem('fundfetti_admin_org_id');
+            }
+        },
         loading,
         refreshOrgs: async () => {
             const data = await api.getOrganizations();

@@ -49,7 +49,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
   spec:
     rules:
-    - host: flowers.treympick.me
+    - host: fundfetti.example.com
       http:
         paths:
         - backend:
@@ -61,4 +61,4 @@ metadata:
           pathType: ImplementationSpecific
     tls:
     - hosts:
-      - flowers.treympick.me
+      - fundfetti.example.com
