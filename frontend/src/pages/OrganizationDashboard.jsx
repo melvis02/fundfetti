@@ -344,8 +344,8 @@ export default function OrganizationDashboard() {
 
             <div className="container mx-auto px-6 py-8">
                 {/* Tabs */}
-                <div className="border-b border-slate-200 mb-6">
-                    <nav className="-mb-px flex space-x-8">
+                <div className="border-b border-slate-200 mb-6 overflow-x-auto">
+                    <nav className="-mb-px flex space-x-4 md:space-x-8 px-1">
                         <button
                             onClick={() => setActiveTab('categories')}
                             className={`${activeTab === 'categories'
@@ -537,7 +537,8 @@ export default function OrganizationDashboard() {
 
                         {/* Product List */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <table className="min-w-full divide-y divide-slate-100">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-100">
                                 <thead className="bg-slate-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Product</th>
@@ -567,6 +568,7 @@ export default function OrganizationDashboard() {
                                     )}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -747,7 +749,8 @@ export default function OrganizationDashboard() {
                         )}
 
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <table className="min-w-full divide-y divide-slate-100">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-100">
                                 <thead className="bg-slate-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Category Name</th>
@@ -778,6 +781,7 @@ export default function OrganizationDashboard() {
                                     )}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     </div>
                 )}
