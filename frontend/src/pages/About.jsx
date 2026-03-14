@@ -28,7 +28,7 @@ export default function About() {
                     </p>
                     
                     <a 
-                        href="https://github.com/treympick/fundfetti" 
+                        href="https://github.com/melvis02/fundfetti" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-slate-800 hover:bg-slate-700 transition duration-150 ease-in-out"
