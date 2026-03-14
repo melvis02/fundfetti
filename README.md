@@ -39,9 +39,9 @@ High-performance order processing system for non-profit fundraisers. Originally 
 
 ## Tech Stack
 
--   **Backend**: Go (Gorilla Mux), SQLite
+-   **Backend**: Go (Gorilla Mux)
 -   **Frontend**: React, Tailwind CSS
--   **Database**: SQLite (embedded)
+-   **Database**: SQLite (built-in for local dev) or PostgreSQL (recommended for production)
 
 ## Contributing
 
