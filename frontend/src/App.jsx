@@ -13,6 +13,7 @@ import Users from './pages/Users';
 import PublicCampaign from './pages/PublicCampaign';
 import PublicHome from './pages/PublicHome';
 import Login from './pages/Login';
+import About from './pages/About';
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
 
           {/* Public Home */}
           <Route path="/" element={<PublicHome />} />
+          <Route path="/about" element={<About />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

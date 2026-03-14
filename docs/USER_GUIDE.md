@@ -4,7 +4,7 @@ This guide explains the public ordering process for customers.
 
 ## Placing an Order
 
-1.  **Visit the Campaign Page**: You will be provided a link by the fundraiser organizer (e.g., `http://example.com/c/1`).
+1.  **Visit the Campaign Page**: You can find active campaigns listed on the main homepage, or you will be provided a direct link by the fundraiser organizer (e.g., `http://example.com/c/1`).
 2.  **Step 1: Select Items**:
     -   Browse the list of available plants/products.
     -   Use the `+` and `-` buttons to adjust quantities.
