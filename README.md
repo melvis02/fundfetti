@@ -43,17 +43,16 @@ High-performance order processing system for non-profit fundraisers. Originally 
 -   **Frontend**: React, Tailwind CSS
 -   **Database**: SQLite (embedded)
 
-## Roadmap
+## Contributing
 
-- [x] Backend Foundation (DB & API)
-- [x] Multi-Tenancy (Organizations)
-- [x] Admin Dashboard
-- [x] Public Ordering Flow
-- [x] Separate Admin & Public User Interfaces
-- [x] Site-wide Organization Selection
-- [x] Migrate the Orders Management interface to the Admin Dashboard
-- [x] Filtering on Orders Dashboard
-- [ ] Authentication & Authorization
-- [ ] User Management
-- [ ] Basic RBAC for Admins (Global Administrator, Organization Administrator, Campaign Administrator, Reader)
-- [ ] Payment Gateway Integration (Stripe/Square API)
+Contributions are welcome! Since this project is newly open-sourced, please feel free to open issues for bugs or feature requests, and submit pull requests.
+
+1.  Fork the repository
+2.  Create your feature branch (`git checkout -b feature/amazing-feature`)
+3.  Commit your changes (`git commit -m 'Add some amazing feature'`)
+4.  Push to the branch (`git push origin feature/amazing-feature`)
+5.  Open a Pull Request
+
+## License
+
+This project is open-source and available under the terms of the MIT License.

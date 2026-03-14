@@ -4,8 +4,8 @@ This guide explains how to use the Admin Dashboard to manage Organizations, Camp
 
 ## Getting Started
 
-1.  Access the Dashboard at the root monitoring URL (e.g., `http://localhost:8080`).
-2.  The main dashboard shows all **Orders** in the system, imported or placed online.
+1.  Access the Admin Dashboard by clicking the **Admin Login** link in the footer of the public homepage, or navigating directly to `/login`.
+2.  After logging in, the main dashboard shows all **Orders** in the system, either imported or placed online.
 
 ## Managing Organizations
 

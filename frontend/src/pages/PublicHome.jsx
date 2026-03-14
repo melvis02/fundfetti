@@ -133,6 +133,7 @@ export default function PublicHome() {
                 <div className="container mx-auto px-6">
                     <p>&copy; {new Date().getFullYear()} Fundfetti. All rights reserved.</p>
                     <div className="mt-4 space-x-4">
+                        <Link to="/about" className="hover:text-white transition-colors">About</Link>
                         <Link to="/login" className="hover:text-white transition-colors">Admin Login</Link>
                     </div>
                 </div>
