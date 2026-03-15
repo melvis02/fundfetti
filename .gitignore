@@ -37,3 +37,7 @@ seed
 # Dynamic data
 *.db
 .DS_Store
+
+
+# App binary
+fundfetti
