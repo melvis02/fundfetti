@@ -108,7 +108,7 @@ export default function PublicCampaign() {
             <SiteHeader />
             {/* Header / Hero */}
             <div className="bg-white shadow-sm border-b border-slate-200">
-                <div className="container mx-auto px-6 py-6 max-w-2xl">
+                <div className="container mx-auto px-6 py-6 max-w-4xl">
                     <div className="text-center relative">
                         {campaign.organization_name && (
                             <div className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-2">{campaign.organization_name}</div>
@@ -134,7 +134,7 @@ export default function PublicCampaign() {
                 </div>
             </div>
 
-            <div className="container mx-auto px-6 py-8 max-w-2xl">
+            <div className="container mx-auto px-6 py-8 max-w-4xl">
 
                 {/* Step 1: Products */}
                 {step === 1 && (
@@ -149,9 +149,9 @@ export default function PublicCampaign() {
                             {Object.entries(categorizedProducts).map(([category, products]) => (
                                 <div key={category}>
                                     <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">{category}</h3>
-                                    <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {products.map(product => (
-                                            <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg border-slate-100 bg-slate-50/50">
+                                            <div key={product.id} className="flex items-center justify-between gap-4 p-4 border rounded-lg border-slate-100 bg-slate-50/50 h-full">
                                                 <div>
                                                     <h4 className="font-semibold text-slate-900">{product.name}</h4>
                                                     <p className="text-slate-500 text-sm">{product.description}</p>
@@ -189,7 +189,7 @@ export default function PublicCampaign() {
 
                 {/* Step 2: Details */}
                 {step === 2 && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-w-2xl mx-auto">
                         {campaign.header_text && (
                             <div className="mb-6 bg-blue-50 border border-blue-100 rounded-lg p-4 text-blue-900 shadow-sm whitespace-pre-wrap">
                                 {campaign.header_text}
@@ -225,7 +225,7 @@ export default function PublicCampaign() {
 
                 {/* Step 3: Review */}
                 {step === 3 && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-w-2xl mx-auto">
                         <h2 className="text-xl font-semibold mb-6">Review Order</h2>
                         <div className="bg-slate-50 rounded-lg p-4 mb-6 space-y-2 text-sm text-slate-700">
                             <div className="flex justify-between"><span className="font-medium">Name:</span> {customer.name}</div>
@@ -264,7 +264,7 @@ export default function PublicCampaign() {
 
                 {/* Step 4: Success */}
                 {step === 4 && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center max-w-2xl mx-auto">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
                         </div>
