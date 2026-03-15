@@ -140,6 +140,6 @@ func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	session.Save(r, w)
 
-	// Redirect back to dashboard upon successful login
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	// Redirect back to admin dashboard upon successful login
+	http.Redirect(w, r, "/admin", http.StatusTemporaryRedirect)
 }
