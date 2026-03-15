@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../services/api';
+import SiteHeader from '../components/SiteHeader';
 
 const renderTextWithLinks = (text) => {
     if (!text) return null;
@@ -99,21 +100,16 @@ export default function PublicCampaign() {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    if (!campaign) return <div className="min-h-screen flex items-center justify-center">Fundraiser Not Found</div>;
+    if (loading) return <div className="min-h-screen bg-slate-50 font-sans text-slate-800"><SiteHeader /><div className="flex h-[calc(100vh-64px)] items-center justify-center">Loading...</div></div>;
+    if (!campaign) return <div className="min-h-screen bg-slate-50 font-sans text-slate-800"><SiteHeader /><div className="flex h-[calc(100vh-64px)] items-center justify-center text-slate-500 text-lg">Fundraiser Not Found</div></div>;
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+            <SiteHeader />
             {/* Header / Hero */}
             <div className="bg-white shadow-sm border-b border-slate-200">
                 <div className="container mx-auto px-6 py-6 max-w-2xl">
-                    <div className="flex w-full justify-start mb-4 md:mb-0 md:absolute md:left-6 md:top-6">
-                        <Link to="/" className="text-slate-400 hover:text-slate-600 font-medium text-sm flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            All Fundraisers
-                        </Link>
-                    </div>
-                    <div className="text-center md:mt-0 relative">
+                    <div className="text-center relative">
                         {campaign.organization_name && (
                             <div className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-2">{campaign.organization_name}</div>
                         )}
