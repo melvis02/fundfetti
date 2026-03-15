@@ -211,6 +211,10 @@ func InitDB(driverName, dataSourceName string) error {
 	ignoreErr(addColumn(driverName, "campaigns", "header_text", "TEXT"))
 	ignoreErr(addColumn(driverName, "campaigns", "slug", "TEXT"))
 
+	// SSO Enhancements
+	ignoreErr(addColumn(driverName, "users", "oauth_provider", "TEXT"))
+	ignoreErr(addColumn(driverName, "users", "oauth_id", "TEXT"))
+
 	return nil
 }
 
@@ -332,6 +336,8 @@ type DBUser struct {
 	PasswordHash   string    `json:"-"` // Never expose password hash
 	Role           string    `json:"role"`
 	OrganizationID *int64    `json:"org_id"`
+	OAuthProvider   string    `json:"oauth_provider,omitempty"`
+	OAuthID         string    `json:"oauth_id,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 

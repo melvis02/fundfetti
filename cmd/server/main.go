@@ -50,6 +50,8 @@ func StartServer() {
 	router.HandleFunc("/api/auth/login", auth.LoginHandler).Methods("POST")
 	router.HandleFunc("/api/auth/logout", auth.LogoutHandler).Methods("POST")
 	router.HandleFunc("/api/auth/me", auth.MeHandler).Methods("GET")
+	router.HandleFunc("/api/auth/google", auth.GoogleLoginHandler).Methods("GET")
+	router.HandleFunc("/api/auth/google/callback", auth.GoogleCallbackHandler).Methods("GET")
 
 	// Public Routes
 	router.HandleFunc("/api/orders", createOrderHandler).Methods("POST")

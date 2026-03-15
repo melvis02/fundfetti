@@ -30,7 +30,7 @@ func CreateUser(email, passwordHash, role string, orgID *int64) (int64, error) {
 // GetUserByEmail retrieves a user by email.
 func GetUserByEmail(email string) (*DBUser, error) {
 	var u DBUser
-	err := DB.QueryRow(Rebind("SELECT id, email, password_hash, role, organization_id, created_at FROM users WHERE email = ?"), email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.OrganizationID, &u.CreatedAt)
+	err := DB.QueryRow(Rebind("SELECT id, email, password_hash, role, organization_id, COALESCE(oauth_provider, ''), COALESCE(oauth_id, ''), created_at FROM users WHERE email = ?"), email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.OrganizationID, &u.OAuthProvider, &u.OAuthID, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -40,11 +40,43 @@ func GetUserByEmail(email string) (*DBUser, error) {
 // GetUserByID retrieves a user by ID.
 func GetUserByID(id int64) (*DBUser, error) {
 	var u DBUser
-	err := DB.QueryRow(Rebind("SELECT id, email, password_hash, role, organization_id, created_at FROM users WHERE id = ?"), id).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.OrganizationID, &u.CreatedAt)
+	err := DB.QueryRow(Rebind("SELECT id, email, password_hash, role, organization_id, COALESCE(oauth_provider, ''), COALESCE(oauth_id, ''), created_at FROM users WHERE id = ?"), id).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.OrganizationID, &u.OAuthProvider, &u.OAuthID, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &u, nil
+}
+
+// GetUserByOAuthID retrieves a user based on their SSO provider and ID.
+func GetUserByOAuthID(provider, oauthID string) (*DBUser, error) {
+	var u DBUser
+	err := DB.QueryRow(Rebind("SELECT id, email, password_hash, role, organization_id, oauth_provider, oauth_id, created_at FROM users WHERE oauth_provider = ? AND oauth_id = ?"), provider, oauthID).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.OrganizationID, &u.OAuthProvider, &u.OAuthID, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// CreateOAuthUser creates a user using their SSO details.
+func CreateOAuthUser(email, provider, oauthID, role string) (int64, error) {
+	// Provide a dummy password hash so standard schema restrictions don't fail parsing.
+	dummyHash := "[OAUTH]"
+	query := "INSERT INTO users (email, password_hash, role, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?)"
+
+	if currentDriver == "postgres" {
+		var id int64
+		err := DB.QueryRow(Rebind(query+" RETURNING id"), email, dummyHash, role, provider, oauthID).Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+		return id, nil
+	}
+
+	res, err := DB.Exec(query, email, dummyHash, role, provider, oauthID)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
 }
 
 // ListUsers returns a list of users.
