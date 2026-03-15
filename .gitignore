@@ -24,6 +24,9 @@ go.work.sum
 # env file
 .env
 
+# VS Code configs
+.vscode/
+
 # VS Code debug binaries
 __debug_bin*
 
