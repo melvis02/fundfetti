@@ -153,16 +153,42 @@ func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	var orders []db.DBOrder
 	var err error
 
-	orgIDStr := r.URL.Query().Get("org_id")
-	if orgIDStr != "" {
-		if orgID, parseErr := strconv.ParseInt(orgIDStr, 10, 64); parseErr == nil {
-			orders, err = db.GetOrganizationOrders(orgID)
+	reqOrgIDStr := r.URL.Query().Get("org_id")
+	var reqOrgID int64
+	if reqOrgIDStr != "" {
+		if id, parseErr := strconv.ParseInt(reqOrgIDStr, 10, 64); parseErr == nil {
+			reqOrgID = id
 		} else {
 			http.Error(w, "Invalid org_id", http.StatusBadRequest)
 			return
 		}
+	}
+
+	role, _ := r.Context().Value("role").(string)
+	userOrgID, hasOrg := r.Context().Value("org_id").(int64)
+
+	// If global_admin, they can query specific org or all
+	if role == "global_admin" {
+		if reqOrgID != 0 {
+			orders, err = db.GetOrganizationOrders(reqOrgID)
+		} else {
+			orders, err = db.GetOrders()
+		}
 	} else {
-		orders, err = db.GetOrders()
+		// Enforce org_admin scoping
+		if !hasOrg {
+			http.Error(w, "Forbidden - User lacks organization association", http.StatusForbidden)
+			return
+		}
+		
+		// If they requested a specific org, verify it's theirs
+		if reqOrgID != 0 && reqOrgID != userOrgID {
+			http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+			return
+		}
+
+		// Always scope to the user's org
+		orders, err = db.GetOrganizationOrders(userOrgID)
 	}
 
 	if err != nil {
@@ -202,6 +228,15 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 				orgID = campaign.OrganizationID
 			}
 		}
+	}
+
+	// Tenant Verification
+	role, _ := r.Context().Value("role").(string)
+	userOrgID, _ := r.Context().Value("org_id").(int64)
+
+	if role != "global_admin" && orgID != userOrgID {
+		http.Error(w, "Forbidden - User does not have access to this campaign", http.StatusForbidden)
+		return
 	}
 
 	// Auto-create products if they don't exist
@@ -303,6 +338,20 @@ func orderStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Tenant verification
+	orderOrgID, err := db.GetOrderOrganizationID(id)
+	if err != nil {
+		http.Error(w, "Order not found", http.StatusNotFound)
+		return
+	}
+	
+	role, _ := r.Context().Value("role").(string)
+	userOrgID, _ := r.Context().Value("org_id").(int64)
+	if role != "global_admin" && orderOrgID != userOrgID {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+		return
+	}
+
 	var req struct {
 		PickedUp bool `json:"picked_up"`
 		Paid     bool `json:"paid"`
@@ -328,6 +377,20 @@ func deleteOrderHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid Order ID", http.StatusBadRequest)
+		return
+	}
+
+	// Tenant verification
+	orderOrgID, err := db.GetOrderOrganizationID(id)
+	if err != nil {
+		http.Error(w, "Order not found", http.StatusNotFound)
+		return
+	}
+	
+	role, _ := r.Context().Value("role").(string)
+	userOrgID, _ := r.Context().Value("org_id").(int64)
+	if role != "global_admin" && orderOrgID != userOrgID {
+		http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
 		return
 	}
 

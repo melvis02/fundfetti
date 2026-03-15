@@ -314,6 +314,18 @@ type DBOrderItem struct {
 	Quantity  int
 }
 
+func GetOrderOrganizationID(orderID int64) (int64, error) {
+	var orgID int64
+	query := `
+		SELECT c.organization_id 
+		FROM orders o 
+		JOIN campaigns c ON o.campaign_id = c.id 
+		WHERE o.id = ?
+	`
+	err := DB.QueryRow(Rebind(query), orderID).Scan(&orgID)
+	return orgID, err
+}
+
 type DBUser struct {
 	ID             int64     `json:"id"`
 	Email          string    `json:"email"`
