@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
+import SiteHeader from '../components/SiteHeader';
 
 export default function PublicHome() {
     const [campaigns, setCampaigns] = useState([]);
@@ -35,6 +36,7 @@ export default function PublicHome() {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+            <SiteHeader />
             {/* Hero Section */}
             <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white">
                 <div className="container mx-auto px-6 py-20 text-center">

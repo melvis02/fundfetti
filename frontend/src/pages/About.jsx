@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import SiteHeader from '../components/SiteHeader';
 
 export default function About() {
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
+            <SiteHeader />
             <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white">
                 <div className="container mx-auto px-6 py-12 text-center">
                     <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight drop-shadow-sm">
