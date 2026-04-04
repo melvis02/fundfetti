@@ -166,6 +166,7 @@ export default function OrganizationDashboard() {
 
     const openManageProducts = (campaign) => {
         if (products.length === 0) fetchProducts();
+        if (categories.length === 0) fetchCategories();
         setSelectedCampaign(campaign);
     };
 
@@ -247,13 +248,11 @@ export default function OrganizationDashboard() {
     const [orders, setOrders] = useState([]);
     const [orderFilter, setOrderFilter] = useState('all'); // all, pending_pickup, unpaid
     const [searchQuery, setSearchQuery] = useState('');
-    const [campaignFilter, setCampaignFilter] = useState('all');
 
     useEffect(() => {
         if (org) {
-            if (activeTab === 'campaigns') fetchCampaigns();
+            if (activeTab === 'campaigns') { fetchCampaigns(); fetchOrders(); }
             if (activeTab === 'products') { fetchProducts(); fetchCategories(); }
-            if (activeTab === 'orders') fetchOrders();
             if (activeTab === 'categories') fetchCategories();
         }
     }, [org, activeTab]);
@@ -261,10 +260,13 @@ export default function OrganizationDashboard() {
     const fetchOrders = async () => {
         setSubLoading(true);
         try {
-            const data = await api.getOrgOrders(id);
+            const data = await api.getOrders({ unassigned: true });
             setOrders(data || []);
         } catch (e) {
             console.error(e);
+            if (e.message.includes('Forbidden')) {
+                 setOrders([]); // Local non-global admins might not be able to get this if not implemented perfectly, but we fixed the backend to allow it for their prod/db.
+            }
         } finally {
             setSubLoading(false);
         }
@@ -299,11 +301,6 @@ export default function OrganizationDashboard() {
             const matchesEmail = o.Email?.toLowerCase().includes(q);
             const matchesId = o.ID?.toString().includes(q);
             if (!matchesName && !matchesEmail && !matchesId) return false;
-        }
-
-        // Campaign Filter
-        if (campaignFilter !== 'all') {
-            if (o.CampaignID !== parseInt(campaignFilter)) return false;
         }
 
         // Status Filter
@@ -381,15 +378,6 @@ export default function OrganizationDashboard() {
                                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                         >
                             Users
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('orders')}
-                            className={`${activeTab === 'orders'
-                                ? 'border-primary-500 text-primary-600'
-                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                        >
-                            Orders
                         </button>
                     </nav>
                 </div>
@@ -469,8 +457,9 @@ export default function OrganizationDashboard() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2 text-sm font-medium pt-2 border-t border-slate-50">
+                                        <Link to={`/admin/organizations/${id}/campaigns/${c.id}`} className="text-primary-600 hover:text-primary-700 flex-1 text-left">Manage Orders</Link>
                                         {user?.role !== 'reader' && (
-                                            <button onClick={() => openManageProducts(c)} className="text-primary-600 hover:text-primary-700 flex-1 text-left">Manage Products</button>
+                                            <button onClick={() => openManageProducts(c)} className="text-primary-600 hover:text-primary-700 mr-2 border-l border-slate-200 pl-2">Products</button>
                                         )}
                                         <Link to={c.slug && org.slug ? `/c/${org.slug}/${c.slug}` : `/c/${c.id}`} target="_blank" className="text-slate-500 hover:text-slate-700 mr-2">View</Link>
                                         {user?.role !== 'reader' && (
@@ -488,6 +477,123 @@ export default function OrganizationDashboard() {
                                 </div>
                             )}
                         </div>
+
+                        {/* Unassigned Orders Legacy Backup */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-12">
+                            <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center bg-slate-50 gap-4">
+                                <div>
+                                    <h3 className="font-semibold text-slate-700">Unassigned Orders Legacy Backup</h3>
+                                    <p className="text-xs text-slate-500">Orders placed outside the context of a specific campaign.</p>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Search orders..."
+                                            className="pl-8 pr-4 py-1.5 text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full sm:w-64"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                        <svg className="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <select
+                                        className="text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                        value={orderFilter}
+                                        onChange={(e) => setOrderFilter(e.target.value)}
+                                    >
+                                        <option value="all">Any Status</option>
+                                        <option value="pending_pickup">Pending Pickup</option>
+                                        <option value="unpaid">Unpaid</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-100">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">ID</th>
+                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Customer</th>
+                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Items</th>
+                                            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
+                                            <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredOrders.length === 0 ? (
+                                            <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-500">No orders found.</td></tr>
+                                        ) : (
+                                            filteredOrders.map(order => (
+                                                <tr key={order.ID} className="hover:bg-slate-50">
+                                                    <td className="px-6 py-4 text-sm text-slate-500">#{order.ID}</td>
+                                                    <td className="px-6 py-4 text-sm">
+                                                        <div className="font-medium text-slate-900">{order.Name}</div>
+                                                        <div className="text-slate-500 text-xs">{order.Email}</div>
+                                                        {order.Phone && <div className="text-slate-500 text-xs">{order.Phone}</div>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600">
+                                                        {order.Items && order.Items.length > 0 ? (
+                                                            <ul className="list-disc list-inside text-xs">
+                                                                {order.Items.map((item, idx) => (
+                                                                    <li key={idx}>{item.Quantity}x {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.PlantType}</li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : (
+                                                            <span className="text-slate-400 italic">No items</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm">
+                                                        <div className="flex flex-col gap-2">
+                                                            <button
+                                                                onClick={user?.role !== 'reader' ? () => toggleOrderStatus(order, 'paid') : undefined}
+                                                                disabled={user?.role === 'reader'}
+                                                                className={`text-xs px-2 py-1 rounded-full border transition-colors ${order.Paid
+                                                                    ? 'bg-green-100 text-green-700 border-green-200'
+                                                                    : 'bg-red-50 text-red-600 border-red-100'} ${user?.role !== 'reader' ? 'hover:bg-green-200 hover:bg-red-100 cursor-pointer' : 'cursor-default opacity-80'}`}
+                                                            >
+                                                                {order.Paid ? 'Paid' : 'Unpaid'}
+                                                            </button>
+                                                            <button
+                                                                onClick={user?.role !== 'reader' ? () => toggleOrderStatus(order, 'picked_up') : undefined}
+                                                                disabled={user?.role === 'reader'}
+                                                                className={`text-xs px-2 py-1 rounded-full border transition-colors ${order.PickedUp
+                                                                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                                                    : 'bg-amber-50 text-amber-600 border-amber-100'} ${user?.role !== 'reader' ? 'hover:bg-blue-200 hover:bg-amber-100 cursor-pointer' : 'cursor-default opacity-80'}`}
+                                                            >
+                                                                {order.PickedUp ? ' picked up' : 'Pending Pickup'}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-right">
+                                                        {user?.role !== 'reader' && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (window.confirm('Are you sure you want to delete this order? This cannot be undone.')) {
+                                                                        try {
+                                                                            await api.deleteOrder(order.ID);
+                                                                            fetchOrders();
+                                                                        } catch (e) {
+                                                                            alert("Failed to delete order");
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                className="text-red-300 hover:text-red-500"
+                                                                title="Delete Order"
+                                                            >
+                                                                🗑
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                     </div>
                 )}
 
@@ -573,170 +679,7 @@ export default function OrganizationDashboard() {
                     </div>
                 )}
 
-                {activeTab === 'orders' && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center bg-slate-50 gap-4">
-                            <h3 className="font-semibold text-slate-700">Order Management</h3>
-                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        placeholder="Search orders..."
-                                        className="pl-8 pr-4 py-1.5 text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full sm:w-64"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                    <svg className="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </div>
-                                <select
-                                    className="text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                                    value={campaignFilter}
-                                    onChange={(e) => setCampaignFilter(e.target.value)}
-                                >
-                                    <option value="all">All Campaigns</option>
-                                    {campaigns.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    className="text-sm border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                                    value={orderFilter}
-                                    onChange={(e) => setOrderFilter(e.target.value)}
-                                >
-                                    <option value="all">Any Status</option>
-                                    <option value="pending_pickup">Pending Pickup</option>
-                                    <option value="unpaid">Unpaid</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        {/* Import and Print Actions */}
-                        <div className="p-4 border-b border-slate-100 bg-white grid gap-4 grid-cols-1 md:grid-cols-2">
-                            <div className="p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50">
-                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                                    <span>📥</span> Import Orders CSV
-                                </h4>
-                                <UploadForm onUploadSuccess={fetchOrders} campaigns={campaigns} />
-                            </div>
-                            <div className="flex flex-col justify-center gap-3">
-                                <h4 className="text-sm font-semibold text-slate-700">Print Options</h4>
-                                <div className="flex flex-col gap-3">
-                                    <div className="flex gap-3">
-                                        <a
-                                            href={`/print/summary?org_id=${id}`}
-                                            target="_blank"
-                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors font-medium border border-slate-200 text-sm w-1/2"
-                                        >
-                                            <span>📄</span> Print Summary
-                                        </a>
-                                        <a
-                                            href={`/print/orders?org_id=${id}`}
-                                            target="_blank"
-                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors font-medium border border-slate-200 text-sm w-1/2"
-                                        >
-                                            <span>🏷️</span> Print Labels
-                                        </a>
-                                    </div>
-                                    <a
-                                        href={`/print/supplier-order?org_id=${id}`}
-                                        target="_blank"
-                                        className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors font-medium border border-slate-200 text-sm"
-                                    >
-                                        <span>📋</span> Print Supplier Order
-                                    </a>
-                                </div>
-                                <p className="text-xs text-slate-500">
-                                    Opens a printer-friendly view in a new tab. Use browser print (Cmd+P) to save as PDF or print.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-slate-100">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">ID</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Customer</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Items</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
-                                        <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {filteredOrders.length === 0 ? (
-                                        <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-500">No orders found.</td></tr>
-                                    ) : (
-                                        filteredOrders.map(order => (
-                                            <tr key={order.ID} className="hover:bg-slate-50">
-                                                <td className="px-6 py-4 text-sm text-slate-500">#{order.ID}</td>
-                                                <td className="px-6 py-4 text-sm">
-                                                    <div className="font-medium text-slate-900">{order.Name}</div>
-                                                    <div className="text-slate-500 text-xs">{order.Email}</div>
-                                                    {order.Phone && <div className="text-slate-500 text-xs">{order.Phone}</div>}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">
-                                                    {order.Items && order.Items.length > 0 ? (
-                                                        <ul className="list-disc list-inside text-xs">
-                                                            {order.Items.map((item, idx) => (
-                                                                <li key={idx}>{item.Quantity}x {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.PlantType}</li>
-                                                            ))}
-                                                        </ul>
-                                                    ) : (
-                                                        <span className="text-slate-400 italic">No items</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm">
-                                                    <div className="flex flex-col gap-2">
-                                                        <button
-                                                            onClick={user?.role !== 'reader' ? () => toggleOrderStatus(order, 'paid') : undefined}
-                                                            disabled={user?.role === 'reader'}
-                                                            className={`text-xs px-2 py-1 rounded-full border transition-colors ${order.Paid
-                                                                ? 'bg-green-100 text-green-700 border-green-200'
-                                                                : 'bg-red-50 text-red-600 border-red-100'} ${user?.role !== 'reader' ? 'hover:bg-green-200 hover:bg-red-100 cursor-pointer' : 'cursor-default opacity-80'}`}
-                                                        >
-                                                            {order.Paid ? 'Paid' : 'Unpaid'}
-                                                        </button>
-                                                        <button
-                                                            onClick={user?.role !== 'reader' ? () => toggleOrderStatus(order, 'picked_up') : undefined}
-                                                            disabled={user?.role === 'reader'}
-                                                            className={`text-xs px-2 py-1 rounded-full border transition-colors ${order.PickedUp
-                                                                ? 'bg-blue-100 text-blue-700 border-blue-200'
-                                                                : 'bg-amber-50 text-amber-600 border-amber-100'} ${user?.role !== 'reader' ? 'hover:bg-blue-200 hover:bg-amber-100 cursor-pointer' : 'cursor-default opacity-80'}`}
-                                                        >
-                                                            {order.PickedUp ? ' picked up' : 'Pending Pickup'}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-right">
-                                                    {user?.role !== 'reader' && (
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (window.confirm('Are you sure you want to delete this order? This cannot be undone.')) {
-                                                                    try {
-                                                                        await api.deleteOrder(order.ID);
-                                                                        fetchOrders();
-                                                                    } catch (e) {
-                                                                        alert("Failed to delete order");
-                                                                    }
-                                                                }
-                                                            }}
-                                                            className="text-red-300 hover:text-red-500"
-                                                            title="Delete Order"
-                                                        >
-                                                            🗑
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
 
                 {activeTab === 'users' && (
                     <UserManagement orgId={parseInt(id)} />

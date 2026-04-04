@@ -3,15 +3,44 @@ import React, { useState, useEffect } from 'react';
 export default function PrintSummary() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [orgName, setOrgName] = useState('');
+    const [campaignName, setCampaignName] = useState('');
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
+        const campaignId = params.get('campaign_id');
         const orgId = params.get('org_id');
-        const endpoint = orgId ? `/api/orders?org_id=${orgId}` : '/api/orders';
+        
+        let endpoint = '/api/orders';
+        if (campaignId) endpoint = `/api/orders?campaign_id=${campaignId}`;
+        else if (orgId) endpoint = `/api/orders?org_id=${orgId}`;
 
         fetch(endpoint)
             .then(res => res.json())
-            .then(data => setOrders(data || []))
+            .then(data => {
+                setOrders(data || []);
+                if (campaignId) {
+                    fetch(`/api/campaigns/${campaignId}`)
+                        .then(res => res.ok ? res.json() : null)
+                        .then(c => {
+                            if (c) {
+                                setCampaignName(c.name || '');
+                                if (c.organization_id) {
+                                    fetch(`/api/organizations/${c.organization_id}`)
+                                        .then(res => res.ok ? res.json() : null)
+                                        .then(org => { if(org) setOrgName(org.name || ''); })
+                                        .catch(() => {});
+                                }
+                            }
+                        })
+                        .catch(() => {});
+                } else if (orgId) {
+                    fetch(`/api/organizations/${orgId}`)
+                        .then(res => res.ok ? res.json() : null)
+                        .then(org => { if(org) setOrgName(org.name || ''); })
+                        .catch(() => {});
+                }
+            })
             .catch(err => console.error("Fetch failed", err))
             .finally(() => setLoading(false));
     }, []);
@@ -21,12 +50,22 @@ export default function PrintSummary() {
     return (
         <>
             <div className="no-print p-6 bg-slate-50 border-b border-slate-200 mb-8">
-                <div className="container mx-auto max-w-4xl">
-                    <h1 className="text-xl font-bold text-slate-800">Summary and Order Sheets</h1>
-                    <p className="text-slate-600 mt-2">
-                        You can now print this page using the browser's print dialog (Cmd+P / Ctrl+P).
-                        This header will be hidden automatically.
-                    </p>
+                <div className="container mx-auto max-w-4xl flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-800">Summary and Order Sheets</h1>
+                        {orgName && <p className="text-slate-600 mt-2">Organization: {orgName}</p>}
+                        {campaignName && <p className="text-slate-600 mt-1">Campaign: {campaignName}</p>}
+                        <p className="text-slate-600 mt-2">
+                            You can now print this page using the browser's print dialog (Cmd+P / Ctrl+P).
+                            This header will be hidden automatically.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => window.print()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition shadow-sm"
+                    >
+                        Print Summary
+                    </button>
                 </div>
             </div>
 

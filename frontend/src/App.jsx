@@ -10,6 +10,7 @@ import PrintSheets from './components/PrintSheets';
 import PrintSupplierOrder from './components/PrintSupplierOrder';
 import Organizations from './pages/Organizations';
 import OrganizationDashboard from './pages/OrganizationDashboard';
+import CampaignDashboard from './pages/CampaignDashboard';
 import Users from './pages/Users';
 import PublicCampaign from './pages/PublicCampaign';
 import PublicHome from './pages/PublicHome';
@@ -54,6 +55,7 @@ function App() {
 
             <Route path="organizations" element={<Organizations />} />
             <Route path="organizations/:id" element={<OrganizationDashboard />} />
+            <Route path="organizations/:id/campaigns/:campaignId" element={<CampaignDashboard />} />
             <Route path="users" element={<Users />} />
           </Route>
 

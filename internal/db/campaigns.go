@@ -65,6 +65,13 @@ func GetOrganizationCampaigns(orgID int64) ([]Campaign, error) {
 		if err := rows.Scan(&c.ID, &c.OrganizationID, &c.Name, &c.Description, &c.StartDate, &c.EndDate, &c.PaymentMetadata, &c.Instructions, &c.OrderEmailCC, &c.IsActive, &c.CatalogURL, &c.CustomEmailText, &c.HeaderText, &c.Slug); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
+		
+		// Fetch products for the campaign
+		products, err := GetCampaignProducts(c.ID)
+		if err == nil {
+			c.Products = products
+		}
+		
 		campaigns = append(campaigns, c)
 	}
 	return campaigns, nil

@@ -161,8 +161,13 @@ export const api = {
         if (!res.ok) throw new Error('Failed to fetch campaign');
         return res.json();
     },
-    getOrgOrders: async (orgId) => {
-        const res = await fetch(`${API_BASE}/orders?org_id=${orgId}`);
+    getOrders: async (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.org_id) queryParams.append('org_id', params.org_id);
+        if (params.campaign_id) queryParams.append('campaign_id', params.campaign_id);
+        if (params.unassigned) queryParams.append('unassigned', 'true');
+        
+        const res = await fetch(`${API_BASE}/orders?${queryParams.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch orders');
         return res.json();
     },

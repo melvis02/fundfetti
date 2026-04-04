@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
-export default function UploadForm({ onUploadSuccess, campaigns = [] }) {
+export default function UploadForm({ onUploadSuccess, campaigns = [], preSelectedCampaignId = null }) {
     const [file, setFile] = useState(null);
-    const [selectedCampaignId, setSelectedCampaignId] = useState('');
+    const [selectedCampaignId, setSelectedCampaignId] = useState(preSelectedCampaignId || '');
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState(null);
     const [isDragOver, setIsDragOver] = useState(false);
@@ -18,6 +18,8 @@ export default function UploadForm({ onUploadSuccess, campaigns = [] }) {
         formData.append('orders_sheets', file);
         if (selectedCampaignId) {
             formData.append('campaign_id', selectedCampaignId);
+        } else if (preSelectedCampaignId) {
+            formData.append('campaign_id', preSelectedCampaignId);
         }
 
         try {
@@ -101,7 +103,7 @@ export default function UploadForm({ onUploadSuccess, campaigns = [] }) {
                     )}
                 </div>
 
-                {campaigns.length > 0 && (
+                {!preSelectedCampaignId && campaigns.length > 0 && (
                     <div className="mt-4">
                         <label className="block text-sm font-medium text-slate-700 mb-1">Assign to Campaign <span className="text-red-500">*</span></label>
                         <select

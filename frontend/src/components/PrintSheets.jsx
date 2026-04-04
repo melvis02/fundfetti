@@ -6,8 +6,12 @@ export default function PrintSheets() {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
+        const campaignId = params.get('campaign_id');
         const orgId = params.get('org_id');
-        const endpoint = orgId ? `/api/orders?org_id=${orgId}` : '/api/orders';
+        
+        let endpoint = '/api/orders';
+        if (campaignId) endpoint = `/api/orders?campaign_id=${campaignId}`;
+        else if (orgId) endpoint = `/api/orders?org_id=${orgId}`;
 
         fetch(endpoint)
             .then(res => res.json())

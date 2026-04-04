@@ -474,6 +474,113 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 	return orders, nil
 }
 
+func GetCampaignOrders(campaignID int64) ([]DBOrder, error) {
+	query := `
+		SELECT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+		FROM orders o
+		WHERE o.campaign_id = ?
+		ORDER BY o.name ASC
+	`
+	rows, err := DB.Query(Rebind(query), campaignID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []DBOrder
+	for rows.Next() {
+		var o DBOrder
+		if err := rows.Scan(&o.ID, &o.CampaignID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt); err != nil {
+			log.Printf("Error scanning order: %v", err)
+			continue
+		}
+
+		// Fetch item count or details
+		itemRows, err := DB.Query(Rebind(`
+			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			FROM order_items oi 
+			LEFT JOIN products p ON oi.product_id = p.id
+			LEFT JOIN categories c ON p.category_id = c.id
+			WHERE oi.order_id = ?`), o.ID)
+		if err == nil {
+			defer itemRows.Close()
+			for itemRows.Next() {
+				var i DBOrderItem
+				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
+					o.Items = append(o.Items, i)
+				}
+			}
+		}
+
+		orders = append(orders, o)
+	}
+	return orders, nil
+}
+
+func GetUnassignedOrders(orgID int64) ([]DBOrder, error) {
+	// Orders without a campaign are implicitly unassigned. We can determine their true organization
+	// by checking the products referenced in their order items.
+	query := `
+		SELECT DISTINCT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+		FROM orders o
+		JOIN order_items oi ON o.id = oi.order_id
+		JOIN products p ON oi.product_id = p.id
+		WHERE o.campaign_id IS NULL AND p.organization_id = ?
+		ORDER BY o.name ASC
+	`
+	// If orgID is 0 (global admin), we might want all unassigned orders
+	if orgID == 0 {
+		query = `
+			SELECT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+			FROM orders o
+			WHERE o.campaign_id IS NULL
+			ORDER BY o.name ASC
+		`
+	}
+	
+	var rows *sql.Rows
+	var err error
+	if orgID == 0 {
+		rows, err = DB.Query(query)
+	} else {
+		rows, err = DB.Query(Rebind(query), orgID)
+	}
+	
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []DBOrder
+	for rows.Next() {
+		var o DBOrder
+		if err := rows.Scan(&o.ID, &o.CampaignID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt); err != nil {
+			log.Printf("Error scanning order: %v", err)
+			continue
+		}
+
+		itemRows, err := DB.Query(Rebind(`
+			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			FROM order_items oi 
+			LEFT JOIN products p ON oi.product_id = p.id
+			LEFT JOIN categories c ON p.category_id = c.id
+			WHERE oi.order_id = ?`), o.ID)
+		if err == nil {
+			defer itemRows.Close()
+			for itemRows.Next() {
+				var i DBOrderItem
+				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
+					o.Items = append(o.Items, i)
+				}
+			}
+		}
+
+		orders = append(orders, o)
+	}
+	return orders, nil
+}
+
+
 func UpdateOrderStatus(id int64, pickedUp, paid bool) error {
 	_, err := DB.Exec(Rebind("UPDATE orders SET picked_up = ?, paid = ? WHERE id = ?"), pickedUp, paid, id)
 	return err
@@ -483,3 +590,4 @@ func DeleteOrder(id int64) error {
 	_, err := DB.Exec(Rebind("DELETE FROM orders WHERE id = ?"), id)
 	return err
 }
+

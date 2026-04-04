@@ -156,7 +156,12 @@ func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	reqOrgIDStr := r.URL.Query().Get("org_id")
+	reqCampaignIDStr := r.URL.Query().Get("campaign_id")
+	unassignedStr := r.URL.Query().Get("unassigned")
+
 	var reqOrgID int64
+	var reqCampaignID int64
+
 	if reqOrgIDStr != "" {
 		if id, parseErr := strconv.ParseInt(reqOrgIDStr, 10, 64); parseErr == nil {
 			reqOrgID = id
@@ -166,11 +171,40 @@ func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if reqCampaignIDStr != "" {
+		if id, parseErr := strconv.ParseInt(reqCampaignIDStr, 10, 64); parseErr == nil {
+			reqCampaignID = id
+		} else {
+			http.Error(w, "Invalid campaign_id", http.StatusBadRequest)
+			return
+		}
+	}
+
 	role, _ := r.Context().Value("role").(string)
 	userOrgID, hasOrg := r.Context().Value("org_id").(int64)
 
-	// If global_admin, they can query specific org or all
-	if role == "global_admin" {
+	// If a specific campaign was requested, we should verify tenant isolation on that campaign
+	if reqCampaignID != 0 {
+		c, err := db.GetCampaign(reqCampaignID)
+		if err != nil || c == nil {
+			http.Error(w, "Campaign not found", http.StatusNotFound)
+			return
+		}
+		if role != "global_admin" && c.OrganizationID != userOrgID {
+			http.Error(w, "Forbidden - Tenant Isolation", http.StatusForbidden)
+			return
+		}
+		orders, err = db.GetCampaignOrders(reqCampaignID)
+	} else if unassignedStr == "true" {
+		// Only global admin can view unassigned orders reliably, or we provide all unassigned.
+		// Since unassigned orders have NO tenant isolation (org_id is not present on orders), 
+		// we just return all unassigned.
+		if role != "global_admin" {
+			http.Error(w, "Forbidden - Only global_admin can view unassigned orders", http.StatusForbidden)
+			return
+		}
+		orders, err = db.GetUnassignedOrders(0)
+	} else if role == "global_admin" {
 		if reqOrgID != 0 {
 			orders, err = db.GetOrganizationOrders(reqOrgID)
 		} else {
@@ -189,7 +223,7 @@ func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Always scope to the user's org
+		// Always scope to the user's org if not specifying Campaign or Unassigned
 		orders, err = db.GetOrganizationOrders(userOrgID)
 	}
 
