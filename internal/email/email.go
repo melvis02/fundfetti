@@ -33,8 +33,14 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 
 		// Try to find price in campaign products if possible
 		for _, p := range campaign.Products {
-			if p.Name == item.PlantType {
+			if item.ProductID != nil && *item.ProductID == p.ID {
 				total += float64(p.PriceCents*item.Quantity) / 100.0
+				break
+			}
+			// Fallback block if ProductID is nil (e.g. legacy/CSV orders)
+			if item.ProductID == nil && p.Name == item.PlantType {
+				total += float64(p.PriceCents*item.Quantity) / 100.0
+				break // Prevents double counting if duplicate names exist
 			}
 		}
 	}

@@ -19,6 +19,7 @@ type ColumnMap struct {
 type OrderedPlant struct {
 	PlantType string
 	Quantity  int
+	ProductID *int64
 }
 
 type Order struct {

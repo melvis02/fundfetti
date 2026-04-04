@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import PrintSummary from './components/PrintSummary';
 import PrintSheets from './components/PrintSheets';
+import PrintSupplierOrder from './components/PrintSupplierOrder';
 import Organizations from './pages/Organizations';
 import OrganizationDashboard from './pages/OrganizationDashboard';
 import Users from './pages/Users';
@@ -34,6 +35,11 @@ function App() {
           <Route path="/print/orders" element={
             <ProtectedRoute>
               <PrintSheets />
+            </ProtectedRoute>
+          } />
+          <Route path="/print/supplier-order" element={
+            <ProtectedRoute>
+              <PrintSupplierOrder />
             </ProtectedRoute>
           } />
 

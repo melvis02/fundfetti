@@ -622,20 +622,29 @@ export default function OrganizationDashboard() {
                             </div>
                             <div className="flex flex-col justify-center gap-3">
                                 <h4 className="text-sm font-semibold text-slate-700">Print Options</h4>
-                                <div className="flex gap-3">
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex gap-3">
+                                        <a
+                                            href={`/print/summary?org_id=${id}`}
+                                            target="_blank"
+                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors font-medium border border-slate-200 text-sm w-1/2"
+                                        >
+                                            <span>📄</span> Print Summary
+                                        </a>
+                                        <a
+                                            href={`/print/orders?org_id=${id}`}
+                                            target="_blank"
+                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors font-medium border border-slate-200 text-sm w-1/2"
+                                        >
+                                            <span>🏷️</span> Print Labels
+                                        </a>
+                                    </div>
                                     <a
-                                        href={`/print/summary?org_id=${id}`}
+                                        href={`/print/supplier-order?org_id=${id}`}
                                         target="_blank"
-                                        className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg transition-colors font-medium border border-slate-200 text-sm"
+                                        className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition-colors font-medium border border-slate-200 text-sm"
                                     >
-                                        <span>📄</span> Print Summary
-                                    </a>
-                                    <a
-                                        href={`/print/orders?org_id=${id}`}
-                                        target="_blank"
-                                        className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg transition-colors font-medium border border-slate-200 text-sm"
-                                    >
-                                        <span>🏷️</span> Print Labels
+                                        <span>📋</span> Print Supplier Order
                                     </a>
                                 </div>
                                 <p className="text-xs text-slate-500">
@@ -671,7 +680,7 @@ export default function OrganizationDashboard() {
                                                     {order.Items && order.Items.length > 0 ? (
                                                         <ul className="list-disc list-inside text-xs">
                                                             {order.Items.map((item, idx) => (
-                                                                <li key={idx}>{item.Quantity}x {item.PlantType}</li>
+                                                                <li key={idx}>{item.Quantity}x {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.PlantType}</li>
                                                             ))}
                                                         </ul>
                                                     ) : (

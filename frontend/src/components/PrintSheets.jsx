@@ -45,7 +45,9 @@ export default function PrintSheets() {
                             <tbody>
                                 {order.Items && order.Items.map((item, i) => (
                                     <tr key={i}>
-                                        <td className="border border-black p-3 font-medium">{item.PlantType}</td>
+                                        <td className="border border-black p-3 font-medium">
+                                            {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.PlantType}
+                                        </td>
                                         <td className="border border-black p-3 text-center font-bold text-xl">{item.Quantity}</td>
                                     </tr>
                                 ))}

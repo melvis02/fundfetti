@@ -190,6 +190,9 @@ func InitDB(driverName, dataSourceName string) error {
 	// Orders: campaign_id
 	ignoreErr(addColumn(driverName, "orders", "campaign_id", "INTEGER"))
 
+	// Order Items: product_id
+	ignoreErr(addColumn(driverName, "order_items", "product_id", "INTEGER"))
+
 	// Products: organization_id
 	ignoreErr(addColumn(driverName, "products", "organization_id", "INTEGER"))
 
@@ -286,14 +289,14 @@ func UpsertOrder(order ordersheets.Order) error {
 	}
 
 	// 2. Insert Order Items
-	stmt, err := tx.Prepare(Rebind("INSERT INTO order_items (order_id, plant_type, quantity) VALUES (?, ?, ?)"))
+	stmt, err := tx.Prepare(Rebind("INSERT INTO order_items (order_id, plant_type, quantity, product_id) VALUES (?, ?, ?, ?)"))
 	if err != nil {
 		return fmt.Errorf("failed to prepare item statement: %w", err)
 	}
 	defer stmt.Close()
 
 	for _, item := range order.OrderedPlants {
-		if _, err := stmt.Exec(orderID, item.PlantType, item.Quantity); err != nil {
+		if _, err := stmt.Exec(orderID, item.PlantType, item.Quantity, item.ProductID); err != nil {
 			return fmt.Errorf("failed to insert order item: %w", err)
 		}
 	}
@@ -314,8 +317,11 @@ type DBOrder struct {
 }
 
 type DBOrderItem struct {
-	PlantType string
-	Quantity  int
+	PlantType    string
+	Quantity     int
+	ProductID    *int64
+	CategoryName *string
+	PriceCents   int
 }
 
 func GetOrderOrganizationID(orderID int64) (int64, error) {
@@ -403,12 +409,17 @@ func GetOrders() ([]DBOrder, error) {
 		// For the requested "Manage Orders" view (Name, Phone, Total Items, Status), logic below:
 
 		// Fetch item count or details
-		itemRows, err := DB.Query(Rebind("SELECT plant_type, quantity FROM order_items WHERE order_id = ?"), o.ID)
+		itemRows, err := DB.Query(Rebind(`
+			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			FROM order_items oi 
+			LEFT JOIN products p ON oi.product_id = p.id
+			LEFT JOIN categories c ON p.category_id = c.id
+			WHERE oi.order_id = ?`), o.ID)
 		if err == nil {
 			defer itemRows.Close()
 			for itemRows.Next() {
 				var i DBOrderItem
-				if err := itemRows.Scan(&i.PlantType, &i.Quantity); err == nil {
+				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
 					o.Items = append(o.Items, i)
 				}
 			}
@@ -442,12 +453,17 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 		}
 
 		// Fetch item count or details
-		itemRows, err := DB.Query(Rebind("SELECT plant_type, quantity FROM order_items WHERE order_id = ?"), o.ID)
+		itemRows, err := DB.Query(Rebind(`
+			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			FROM order_items oi 
+			LEFT JOIN products p ON oi.product_id = p.id
+			LEFT JOIN categories c ON p.category_id = c.id
+			WHERE oi.order_id = ?`), o.ID)
 		if err == nil {
 			defer itemRows.Close()
 			for itemRows.Next() {
 				var i DBOrderItem
-				if err := itemRows.Scan(&i.PlantType, &i.Quantity); err == nil {
+				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
 					o.Items = append(o.Items, i)
 				}
 			}
