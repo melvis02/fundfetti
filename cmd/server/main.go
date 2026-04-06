@@ -280,7 +280,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		productNames := make(map[string]bool)
 		for _, order := range orders {
 			for _, plant := range order.OrderedPlants {
-				productNames[plant.PlantType] = true
+				productNames[plant.ProductName] = true
 			}
 		}
 

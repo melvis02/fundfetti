@@ -202,6 +202,7 @@ export default function CampaignDashboard() {
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">ID</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Customer</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Items</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Total</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
                                     <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Actions</th>
                                 </tr>
@@ -224,12 +225,15 @@ export default function CampaignDashboard() {
                                                 {order.Items && order.Items.length > 0 ? (
                                                     <ul className="list-disc list-inside text-xs">
                                                         {order.Items.map((item, idx) => (
-                                                            <li key={idx}>{item.Quantity}x {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.PlantType}</li>
+                                                            <li key={idx}>{item.Quantity}x {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.ProductName}</li>
                                                         ))}
                                                     </ul>
                                                 ) : (
                                                     <span className="text-slate-400 italic">No items</span>
                                                 )}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                                ${((order.Items?.reduce((sum, item) => sum + (item.Quantity * item.PriceCents), 0) || 0) / 100).toFixed(2)}
                                             </td>
                                             <td className="px-6 py-4 text-sm">
                                                 <div className="flex flex-col gap-2">

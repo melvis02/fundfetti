@@ -20,7 +20,7 @@ export default function OrganizationDashboard() {
 
     // Form states
     const [newCampaign, setNewCampaign] = useState({ name: '', description: '', start_date: '', end_date: '', payment_metadata: '', order_email_cc: '', slug: '', catalog_url: '', header_text: '', custom_email_text: '' });
-    const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0, category_id: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', price_cents: 0, wholesale_price_cents: 0, category_id: '' });
     const [newCategory, setNewCategory] = useState({ name: '' });
     const [editingProduct, setEditingProduct] = useState(null);
     const [editingOrg, setEditingOrg] = useState(null);
@@ -98,10 +98,11 @@ export default function OrganizationDashboard() {
             const payload = {
                 ...newProduct,
                 price_cents: Math.round(parseFloat(newProduct.price_cents) * 100),
+                wholesale_price_cents: Math.round(parseFloat(newProduct.wholesale_price_cents || 0) * 100),
                 category_id: newProduct.category_id ? parseInt(newProduct.category_id) : null
             };
             await api.createProduct(id, payload);
-            setNewProduct({ name: '', price_cents: 0, category_id: '' });
+            setNewProduct({ name: '', price_cents: 0, wholesale_price_cents: 0, category_id: '' });
             fetchProducts();
         } catch (e) {
             console.error(e);
@@ -211,7 +212,8 @@ export default function OrganizationDashboard() {
     const openEditProduct = (p) => {
         setEditingProduct({
             ...p,
-            price_dollars: (p.price_cents / 100).toFixed(2)
+            price_dollars: (p.price_cents / 100).toFixed(2),
+            wholesale_dollars: (p.wholesale_price_cents / 100).toFixed(2)
         });
     };
 
@@ -221,6 +223,7 @@ export default function OrganizationDashboard() {
             const payload = {
                 ...editingProduct,
                 price_cents: Math.round(parseFloat(editingProduct.price_dollars) * 100),
+                wholesale_price_cents: Math.round(parseFloat(editingProduct.wholesale_dollars || 0) * 100),
                 stock_quantity: parseInt(editingProduct.stock_quantity),
                 category_id: editingProduct.category_id ? parseInt(editingProduct.category_id) : null
             };
@@ -611,7 +614,7 @@ export default function OrganizationDashboard() {
                                         </label>
                                     </div>
                                 </div>
-                                <form onSubmit={handleCreateProduct} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                <form onSubmit={handleCreateProduct} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                                     <div className="col-span-1 md:col-span-2">
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
                                         <input type="text" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Potted Tulip" />
@@ -629,7 +632,11 @@ export default function OrganizationDashboard() {
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Price ($)</label>
                                         <input type="number" step="0.01" required className="form-input w-full rounded-lg border-slate-200" value={newProduct.price_cents} onChange={e => setNewProduct({ ...newProduct, price_cents: e.target.value })} placeholder="10.00" />
                                     </div>
-                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 mt-2 col-span-1 md:col-span-4 lg:col-span-1">Add Product</button>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Wholesale ($)</label>
+                                        <input type="number" step="0.01" className="form-input w-full rounded-lg border-slate-200" value={newProduct.wholesale_price_cents} onChange={e => setNewProduct({ ...newProduct, wholesale_price_cents: e.target.value })} placeholder="5.00" />
+                                    </div>
+                                    <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 mt-2 col-span-1 md:col-span-5 lg:col-span-1 border border-primary-600">Add</button>
                                 </form>
                             </div>
                         )}
@@ -649,6 +656,8 @@ export default function OrganizationDashboard() {
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Product</th>
                                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Price</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Wholesale</th>
+                                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Profit</th>
                                         <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Stock</th>
                                         <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Actions</th>
                                     </tr>
@@ -658,6 +667,8 @@ export default function OrganizationDashboard() {
                                         <tr key={p.id}>
                                             <td className="px-6 py-4 text-sm font-medium text-slate-900">{p.name}</td>
                                             <td className="px-6 py-4 text-sm text-slate-600">${(p.price_cents / 100).toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600">${((p.wholesale_price_cents || 0) / 100).toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-green-600">${((p.price_cents - (p.wholesale_price_cents || 0)) / 100).toFixed(2)}</td>
                                             <td className="px-6 py-4 text-sm text-slate-600">{p.stock_quantity === -1 ? 'Unlimited' : p.stock_quantity}</td>
                                             <td className="px-6 py-4 text-sm text-right">
                                                 {user?.role !== 'reader' && (
@@ -670,7 +681,7 @@ export default function OrganizationDashboard() {
                                         </tr>
                                     ))}
                                     {products.length === 0 && (
-                                        <tr><td colSpan="4" className="px-6 py-8 text-center text-slate-500">No products added yet.</td></tr>
+                                        <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-500">No products added yet.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -889,10 +900,14 @@ export default function OrganizationDashboard() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
                                 <input type="text" required className="w-full rounded-lg border-slate-200" value={editingProduct.name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Price ($)</label>
                                     <input type="number" step="0.01" required className="w-full rounded-lg border-slate-200" value={editingProduct.price_dollars} onChange={e => setEditingProduct({ ...editingProduct, price_dollars: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Wholesale ($)</label>
+                                    <input type="number" step="0.01" className="w-full rounded-lg border-slate-200" value={editingProduct.wholesale_dollars} onChange={e => setEditingProduct({ ...editingProduct, wholesale_dollars: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>

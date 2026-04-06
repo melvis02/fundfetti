@@ -76,7 +76,7 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		OrderedPlants: req.Items,
 	}
 
-	if err := db.UpsertOrder(order); err != nil {
+	if err := db.InsertOrder(order); err != nil {
 		http.Error(w, "Failed to create order: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

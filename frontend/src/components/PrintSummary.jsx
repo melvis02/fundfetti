@@ -52,7 +52,7 @@ export default function PrintSummary() {
             <div className="no-print p-6 bg-slate-50 border-b border-slate-200 mb-8">
                 <div className="container mx-auto max-w-4xl flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-bold text-slate-800">Summary and Order Sheets</h1>
+                        <h1 className="text-xl font-bold text-slate-800">Summary</h1>
                         {orgName && <p className="text-slate-600 mt-2">Organization: {orgName}</p>}
                         {campaignName && <p className="text-slate-600 mt-1">Campaign: {campaignName}</p>}
                         <p className="text-slate-600 mt-2">
@@ -78,6 +78,7 @@ export default function PrintSummary() {
                             <th className="p-2 text-left font-bold">Name</th>
                             <th className="p-2 text-left font-bold">Email</th>
                             <th className="p-2 text-left font-bold">Phone</th>
+                            <th className="p-2 text-center font-bold w-20 border-l border-black">Paid?</th>
                             <th className="p-2 text-center font-bold w-20 border-l border-black">Sorted?</th>
                             <th className="p-2 text-center font-bold w-20 border-l border-black">Delivered?</th>
                         </tr>
@@ -85,10 +86,11 @@ export default function PrintSummary() {
                     <tbody>
                         {orders.map((order, idx) => (
                             <tr key={order.ID} className="border-b border-gray-300">
-                                <td className="p-2">{idx + 1}</td>
+                                <td className="p-2">{order.ID}</td>
                                 <td className="p-2 font-medium">{order.Name}</td>
                                 <td className="p-2 text-gray-700">{order.Email}</td>
                                 <td className="p-2 text-gray-700">{order.Phone}</td>
+                                <td className="p-2 border-l border-gray-400 text-center font-bold">{order.Paid ? '✓' : ''}</td>
                                 <td className="p-2 border-l border-gray-400"></td>
                                 <td className="p-2 border-l border-gray-400"></td>
                             </tr>

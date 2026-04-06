@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,8 +7,17 @@ export default function AdminLayout() {
     const { orgs, currentOrg, setCurrentOrg, loading } = useAdmin();
     const { user, logout } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">Loading Admin Config...</div>;
+
+    if (location.pathname === '/admin' || location.pathname === '/admin/') {
+        if (currentOrg) {
+            return <Navigate to={`/admin/organizations/${currentOrg.id}`} replace />;
+        } else if (user?.role === 'global_admin') {
+            return <Navigate to="/admin/organizations" replace />;
+        }
+    }
 
     const navClass = (path) => `px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === path
         ? 'bg-slate-900 text-white'
@@ -50,7 +59,10 @@ export default function AdminLayout() {
                                         value={currentOrg?.id || ''}
                                         onChange={(e) => {
                                             const selected = orgs.find(o => o.id === parseInt(e.target.value));
-                                            if (selected) setCurrentOrg(selected);
+                                            if (selected) {
+                                                setCurrentOrg(selected);
+                                                navigate(`/admin/organizations/${selected.id}`);
+                                            }
                                         }}
                                     >
                                         {orgs.map(org => (

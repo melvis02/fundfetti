@@ -17,9 +17,9 @@ type ColumnMap struct {
 }
 
 type OrderedPlant struct {
-	PlantType string
-	Quantity  int
-	ProductID *int64
+	ProductName string
+	Quantity    int
+	ProductID   *int64
 }
 
 type Order struct {
@@ -102,8 +102,8 @@ func FormatOrderSheet(records [][]string) []Order {
 				continue
 			}
 			order.OrderedPlants = append(order.OrderedPlants, OrderedPlant{
-				PlantType: headers[i],
-				Quantity:  quantity,
+				ProductName: headers[i],
+				Quantity:    quantity,
 			})
 		}
 		orders = append(orders, order)

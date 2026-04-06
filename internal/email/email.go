@@ -29,7 +29,7 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 		// We need product price, but order item currently only has PlantType and Quantity.
 		// Detailed price calculation should ideally be passed in or looked up.
 		// For now, let's just list items.
-		itemsList.WriteString(fmt.Sprintf("<li>%s x %d</li>", item.PlantType, item.Quantity))
+		itemsList.WriteString(fmt.Sprintf("<li>%s x %d</li>", item.ProductName, item.Quantity))
 
 		// Try to find price in campaign products if possible
 		for _, p := range campaign.Products {
@@ -38,7 +38,7 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 				break
 			}
 			// Fallback block if ProductID is nil (e.g. legacy/CSV orders)
-			if item.ProductID == nil && p.Name == item.PlantType {
+			if item.ProductID == nil && p.Name == item.ProductName {
 				total += float64(p.PriceCents*item.Quantity) / 100.0
 				break // Prevents double counting if duplicate names exist
 			}

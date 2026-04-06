@@ -30,7 +30,7 @@ export default function PrintSheets() {
 
                         <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
                             <div>
-                                <h2 className="text-2xl font-bold uppercase tracking-wide">Order #{idx + 1}</h2>
+                                <h2 className="text-2xl font-bold uppercase tracking-wide">Order #{order.ID}</h2>
                                 <h3 className="text-lg font-semibold mt-1">{order.Name}</h3>
                             </div>
                             <div className="text-right text-sm">
@@ -42,7 +42,7 @@ export default function PrintSheets() {
                         <table className="w-full border-collapse mb-8 text-lg">
                             <thead>
                                 <tr className="bg-gray-100 print:bg-gray-100">
-                                    <th className="border border-black p-3 text-left w-3/4">Plant Variety</th>
+                                    <th className="border border-black p-3 text-left w-3/4">Product Name</th>
                                     <th className="border border-black p-3 text-center w-1/4">Quantity</th>
                                 </tr>
                             </thead>
@@ -50,7 +50,7 @@ export default function PrintSheets() {
                                 {order.Items && order.Items.map((item, i) => (
                                     <tr key={i}>
                                         <td className="border border-black p-3 font-medium">
-                                            {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.PlantType}
+                                            {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.ProductName}
                                         </td>
                                         <td className="border border-black p-3 text-center font-bold text-xl">{item.Quantity}</td>
                                     </tr>
@@ -58,23 +58,10 @@ export default function PrintSheets() {
                             </tbody>
                         </table>
 
-                        {/* Checklist Section for Volunteers */}
+                        {/* Notes Section for Volunteers */}
                         <div className="border border-black p-4 bg-gray-50 print:bg-white text-sm">
-                            <p className="font-bold mb-2 uppercase text-xs tracking-wider text-gray-600">Volunteer Verification</p>
-                            <div className="flex gap-8">
-                                <label className="flex items-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-black"></div>
-                                    <span>Picked Up</span>
-                                </label>
-                                <label className="flex items-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-black"></div>
-                                    <span>Paid</span>
-                                </label>
-                                <label className="flex items-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-black"></div>
-                                    <span>Items Verified</span>
-                                </label>
-                            </div>
+                            <p className="font-bold mb-2 uppercase text-xs tracking-wider text-gray-600">Notes / Comments</p>
+                            <div className="w-full h-24 border-t-2 border-dotted border-gray-300 mt-6 print:border-gray-400"></div>
                         </div>
 
                     </div>

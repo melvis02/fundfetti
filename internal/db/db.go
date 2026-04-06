@@ -64,15 +64,14 @@ func InitDB(driverName, dataSourceName string) error {
 		picked_up BOOLEAN DEFAULT FALSE,
 		paid BOOLEAN DEFAULT FALSE,
 		campaign_id INTEGER,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		UNIQUE(name, email)
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`, primaryKeyDef)
 
 	createOrderItemsTable := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS order_items (
 		id %s,
 		order_id INTEGER,
-		plant_type TEXT,
+		product_name TEXT,
 		quantity INTEGER,
 		FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
 	);`, primaryKeyDef)
@@ -116,6 +115,7 @@ func InitDB(driverName, dataSourceName string) error {
 		name TEXT NOT NULL,
 		description TEXT,
 		price_cents INTEGER DEFAULT 0,
+		wholesale_price_cents INTEGER DEFAULT 0,
 		image_url TEXT,
 		stock_quantity INTEGER DEFAULT -1,
 		FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
@@ -173,19 +173,54 @@ func InitDB(driverName, dataSourceName string) error {
 		}
 	}
 
-	// Migrations (Idempotent operations)
-	// These are tricky cross-DB.
-	// ADD COLUMN IF NOT EXISTS is Postgres 9.6+. SQLite supports basic ADD COLUMN.
-	// Simple approach: Ignore error or check for column existence.
-	// Since this is a "migration" step for existing deployments, and I want to be safe:
-	// I will use a helper to add column safely.
-
 	ignoreErr := func(err error) {
 		if err != nil {
-			// Log but don't fail, assuming it might be "duplicate column"
+			// Log but don't fail, assuming it might be "duplicate column" or "already exists"
 			log.Printf("Migration warning (might be already applied): %v", err)
 		}
 	}
+
+	// Migrations for schema changes
+	if driverName == "sqlite" {
+		var createStmt string
+		err := DB.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name='orders'").Scan(&createStmt)
+		if err == nil && strings.Contains(createStmt, "UNIQUE(name, email)") {
+			log.Println("Migrating SQLite orders table to remove UNIQUE constraint...")
+			_, migrateErr := DB.Exec(`
+				CREATE TABLE orders_new (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					name TEXT,
+					email TEXT,
+					phone TEXT,
+					picked_up BOOLEAN DEFAULT FALSE,
+					paid BOOLEAN DEFAULT FALSE,
+					campaign_id INTEGER,
+					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				);
+				INSERT INTO orders_new (id, name, email, phone, picked_up, paid, campaign_id, created_at)
+				SELECT id, name, email, phone, picked_up, paid, campaign_id, created_at FROM orders;
+				DROP TABLE orders;
+				ALTER TABLE orders_new RENAME TO orders;
+			`)
+			if migrateErr != nil {
+				log.Printf("SQLite constrained table migration failed: %v", migrateErr)
+			}
+		}
+	} else if driverName == "postgres" {
+		ignoreErr(func() error {
+			_, err := DB.Exec("ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_name_email_key")
+			return err
+		}())
+	}
+
+	// Rename column plant_type to product_name
+	ignoreErr(func() error {
+		_, err := DB.Exec("ALTER TABLE order_items RENAME COLUMN plant_type TO product_name")
+		return err
+	}())
+
+	// Products: wholesale_price_cents
+	ignoreErr(addColumn(driverName, "products", "wholesale_price_cents", "INTEGER DEFAULT 0"))
 
 	// Orders: campaign_id
 	ignoreErr(addColumn(driverName, "orders", "campaign_id", "INTEGER"))
@@ -236,6 +271,47 @@ func addColumn(driver, table, column, colType string) error {
 		return nil
 	}
 	return err
+}
+
+func InsertOrder(order ordersheets.Order) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var orderID int64
+	insertQuery := "INSERT INTO orders (name, email, phone, campaign_id) VALUES (?, ?, ?, ?)"
+	
+	if currentDriver == "postgres" {
+		err := tx.QueryRow(Rebind(insertQuery+" RETURNING id"), order.Name, order.Email, order.PhoneNumber, order.CampaignID).Scan(&orderID)
+		if err != nil {
+			return fmt.Errorf("failed to insert order: %w", err)
+		}
+	} else {
+		res, err := tx.Exec(insertQuery, order.Name, order.Email, order.PhoneNumber, order.CampaignID)
+		if err != nil {
+			return fmt.Errorf("failed to insert order: %w", err)
+		}
+		orderID, err = res.LastInsertId()
+		if err != nil {
+			return fmt.Errorf("failed to get last insert id: %w", err)
+		}
+	}
+
+	stmt, err := tx.Prepare(Rebind("INSERT INTO order_items (order_id, product_name, quantity, product_id) VALUES (?, ?, ?, ?)"))
+	if err != nil {
+		return fmt.Errorf("failed to prepare item statement: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, item := range order.OrderedPlants {
+		if _, err := stmt.Exec(orderID, item.ProductName, item.Quantity, item.ProductID); err != nil {
+			return fmt.Errorf("failed to insert order item: %w", err)
+		}
+	}
+
+	return tx.Commit()
 }
 
 func UpsertOrder(order ordersheets.Order) error {
@@ -289,14 +365,14 @@ func UpsertOrder(order ordersheets.Order) error {
 	}
 
 	// 2. Insert Order Items
-	stmt, err := tx.Prepare(Rebind("INSERT INTO order_items (order_id, plant_type, quantity, product_id) VALUES (?, ?, ?, ?)"))
+	stmt, err := tx.Prepare(Rebind("INSERT INTO order_items (order_id, product_name, quantity, product_id) VALUES (?, ?, ?, ?)"))
 	if err != nil {
 		return fmt.Errorf("failed to prepare item statement: %w", err)
 	}
 	defer stmt.Close()
 
 	for _, item := range order.OrderedPlants {
-		if _, err := stmt.Exec(orderID, item.PlantType, item.Quantity, item.ProductID); err != nil {
+		if _, err := stmt.Exec(orderID, item.ProductName, item.Quantity, item.ProductID); err != nil {
 			return fmt.Errorf("failed to insert order item: %w", err)
 		}
 	}
@@ -317,7 +393,7 @@ type DBOrder struct {
 }
 
 type DBOrderItem struct {
-	PlantType    string
+	ProductName  string
 	Quantity     int
 	ProductID    *int64
 	CategoryName *string
@@ -357,15 +433,16 @@ type Organization struct {
 }
 
 type Product struct {
-	ID             int64  `json:"id"`
-	OrganizationID int64  `json:"organization_id"`
-	CategoryID     *int64 `json:"category_id"`
-	CategoryName   string `json:"category_name,omitempty"`
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	PriceCents     int    `json:"price_cents"`
-	ImageURL       string `json:"image_url"`
-	StockQuantity  int    `json:"stock_quantity"` // -1 for unlimited
+	ID                  int64  `json:"id"`
+	OrganizationID      int64  `json:"organization_id"`
+	CategoryID          *int64 `json:"category_id"`
+	CategoryName        string `json:"category_name,omitempty"`
+	Name                string `json:"name"`
+	Description         string `json:"description"`
+	PriceCents          int    `json:"price_cents"`
+	WholesalePriceCents int    `json:"wholesale_price_cents"`
+	ImageURL            string `json:"image_url"`
+	StockQuantity       int    `json:"stock_quantity"` // -1 for unlimited
 }
 
 type Campaign struct {
@@ -410,7 +487,7 @@ func GetOrders() ([]DBOrder, error) {
 
 		// Fetch item count or details
 		itemRows, err := DB.Query(Rebind(`
-			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			SELECT oi.product_name, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
 			FROM order_items oi 
 			LEFT JOIN products p ON oi.product_id = p.id
 			LEFT JOIN categories c ON p.category_id = c.id
@@ -419,7 +496,7 @@ func GetOrders() ([]DBOrder, error) {
 			defer itemRows.Close()
 			for itemRows.Next() {
 				var i DBOrderItem
-				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
+				if err := itemRows.Scan(&i.ProductName, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
 					o.Items = append(o.Items, i)
 				}
 			}
@@ -454,7 +531,7 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 
 		// Fetch item count or details
 		itemRows, err := DB.Query(Rebind(`
-			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			SELECT oi.product_name, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
 			FROM order_items oi 
 			LEFT JOIN products p ON oi.product_id = p.id
 			LEFT JOIN categories c ON p.category_id = c.id
@@ -463,7 +540,7 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 			defer itemRows.Close()
 			for itemRows.Next() {
 				var i DBOrderItem
-				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
+				if err := itemRows.Scan(&i.ProductName, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
 					o.Items = append(o.Items, i)
 				}
 			}
@@ -497,7 +574,7 @@ func GetCampaignOrders(campaignID int64) ([]DBOrder, error) {
 
 		// Fetch item count or details
 		itemRows, err := DB.Query(Rebind(`
-			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			SELECT oi.product_name, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
 			FROM order_items oi 
 			LEFT JOIN products p ON oi.product_id = p.id
 			LEFT JOIN categories c ON p.category_id = c.id
@@ -506,7 +583,7 @@ func GetCampaignOrders(campaignID int64) ([]DBOrder, error) {
 			defer itemRows.Close()
 			for itemRows.Next() {
 				var i DBOrderItem
-				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
+				if err := itemRows.Scan(&i.ProductName, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
 					o.Items = append(o.Items, i)
 				}
 			}
@@ -560,7 +637,7 @@ func GetUnassignedOrders(orgID int64) ([]DBOrder, error) {
 		}
 
 		itemRows, err := DB.Query(Rebind(`
-			SELECT oi.plant_type, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
+			SELECT oi.product_name, oi.quantity, oi.product_id, c.name, COALESCE(p.price_cents, 0)
 			FROM order_items oi 
 			LEFT JOIN products p ON oi.product_id = p.id
 			LEFT JOIN categories c ON p.category_id = c.id
@@ -569,7 +646,7 @@ func GetUnassignedOrders(orgID int64) ([]DBOrder, error) {
 			defer itemRows.Close()
 			for itemRows.Next() {
 				var i DBOrderItem
-				if err := itemRows.Scan(&i.PlantType, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
+				if err := itemRows.Scan(&i.ProductName, &i.Quantity, &i.ProductID, &i.CategoryName, &i.PriceCents); err == nil {
 					o.Items = append(o.Items, i)
 				}
 			}

@@ -13,8 +13,16 @@ func TestPhase1Integration(t *testing.T) {
 		t.Fatalf("Failed to init DB: %v", err)
 	}
 
+	// 1.5 Create Org (needed for GetCampaign join)
+	org := Organization{Name: "Test Org", Slug: "test-org"}
+	orgID, err := CreateOrganization(org)
+	if err != nil {
+		t.Fatalf("Failed to create org: %v", err)
+	}
+
 	// 2. Create Product
 	p := Product{
+		OrganizationID: orgID,
 		Name:          "Test Plant",
 		Description:   "A lovely plant",
 		PriceCents:    1000,
@@ -30,9 +38,11 @@ func TestPhase1Integration(t *testing.T) {
 
 	// 3. Create Campaign
 	c := Campaign{
+		OrganizationID: orgID,
 		Name:      "Fall Fundraiser",
 		StartDate: time.Now(),
 		IsActive:  true,
+		Slug:      "fall-fundraiser",
 	}
 	cID, err := CreateCampaign(c)
 	if err != nil {
@@ -64,7 +74,7 @@ func TestPhase1Integration(t *testing.T) {
 		Email:       "john@example.com",
 		PhoneNumber: "555-0100",
 		OrderedPlants: []ordersheets.OrderedPlant{
-			{PlantType: "Test Plant", Quantity: 2},
+			{ProductName: "Test Plant", Quantity: 2},
 		},
 	}
 	if err := UpsertOrder(o); err != nil {
