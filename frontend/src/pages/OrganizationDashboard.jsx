@@ -540,7 +540,7 @@ export default function OrganizationDashboard() {
                                                         {order.Items && order.Items.length > 0 ? (
                                                             <ul className="list-disc list-inside text-xs">
                                                                 {order.Items.map((item, idx) => (
-                                                                    <li key={idx}>{item.Quantity}x {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.PlantType}</li>
+                                                                    <li key={idx}>{item.Quantity}x {item.CategoryName ? `${item.CategoryName} - ` : ''}{item.ProductName}</li>
                                                                 ))}
                                                             </ul>
                                                         ) : (

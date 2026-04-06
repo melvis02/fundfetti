@@ -84,7 +84,7 @@ export default function PublicCampaign() {
         try {
             const items = Object.entries(cart).map(([pid, qty]) => {
                 const product = campaign.products?.find(p => p.id === parseInt(pid));
-                return { ProductID: parseInt(pid), PlantType: product.name, Quantity: qty }; // Backend maps PlantType to Name, and now ProductID
+                return { ProductID: parseInt(pid), ProductName: product.name, Quantity: qty }; // Backend maps ProductName to Name, and now ProductID
             });
 
             await api.submitOrder({

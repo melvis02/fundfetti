@@ -64,13 +64,13 @@ export default function PrintSupplierOrder() {
             if (!categoryStats[cat]) {
                 categoryStats[cat] = {};
             }
-            if (!categoryStats[cat][item.PlantType]) {
-                categoryStats[cat][item.PlantType] = {
+            if (!categoryStats[cat][item.ProductName]) {
+                categoryStats[cat][item.ProductName] = {
                     count: 0,
                     priceCents: item.PriceCents || 0
                 };
             }
-            categoryStats[cat][item.PlantType].count += item.Quantity;
+            categoryStats[cat][item.ProductName].count += item.Quantity;
         });
     });
 
