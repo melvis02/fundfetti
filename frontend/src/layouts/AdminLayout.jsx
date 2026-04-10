@@ -2,14 +2,16 @@ import React from 'react';
 import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AdminLayout() {
     const { orgs, currentOrg, setCurrentOrg, loading } = useAdmin();
     const { user, logout } = useAuth();
+    const { isDarkMode, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">Loading Admin Config...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">Loading Admin Config...</div>;
 
     if (location.pathname === '/admin' || location.pathname === '/admin/') {
         if (currentOrg) {
@@ -25,7 +27,7 @@ export default function AdminLayout() {
         }`;
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-white transition-colors duration-200">
             {/* Top Navigation Bar */}
             <nav className="bg-slate-800 text-white shadow-md">
                 <div className="container mx-auto px-4">
@@ -81,6 +83,13 @@ export default function AdminLayout() {
                                     <div className="font-medium text-white">{user?.email}</div>
                                     <div className="text-slate-400 capitalize">{user?.role?.replace('_', ' ')}</div>
                                 </div>
+                                <button
+                                    onClick={toggleTheme}
+                                    className="p-1.5 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors text-lg line-height-[1]"
+                                    title="Toggle Dark Mode"
+                                >
+                                    {isDarkMode ? '☀️' : '🌙'}
+                                </button>
                                 <button
                                     onClick={logout}
                                     className="p-1.5 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"

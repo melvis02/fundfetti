@@ -23,8 +23,8 @@ func TestPhase1Integration(t *testing.T) {
 	// 2. Create Product
 	p := Product{
 		OrganizationID: orgID,
-		Name:          "Test Plant",
-		Description:   "A lovely plant",
+		Name:          "Test Product",
+		Description:   "A lovely product",
 		PriceCents:    1000,
 		StockQuantity: 100,
 	}
@@ -62,8 +62,8 @@ func TestPhase1Integration(t *testing.T) {
 	if len(linkedC.Products) != 1 {
 		t.Errorf("Expected 1 product, got %d", len(linkedC.Products))
 	}
-	if linkedC.Products[0].Name != "Test Plant" {
-		t.Errorf("Expected product 'Test Plant', got '%s'", linkedC.Products[0].Name)
+	if linkedC.Products[0].Name != "Test Product" {
+		t.Errorf("Expected product 'Test Product', got '%s'", linkedC.Products[0].Name)
 	}
 
 	// 5. Create Order linked to Campaign
@@ -73,8 +73,8 @@ func TestPhase1Integration(t *testing.T) {
 		Name:        "John Doe",
 		Email:       "john@example.com",
 		PhoneNumber: "555-0100",
-		OrderedPlants: []ordersheets.OrderedPlant{
-			{ProductName: "Test Plant", Quantity: 2},
+		Items: []ordersheets.OrderItem{
+			{ProductName: "Test Product", Quantity: 2},
 		},
 	}
 	if err := UpsertOrder(o); err != nil {

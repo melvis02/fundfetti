@@ -15,12 +15,12 @@
         <br/>
         <table class='table table-hover table-bordered'>
             <tr>
-                <th scope="col">Plant</th>
+                <th scope="col">Product</th>
                 <th scope="col">Quantity</th>
             </tr>
-            {{range .OrderedPlants}}
+            {{range .Items}}
             <tr>
-                <td>{{.PlantType}}</td>
+                <td>{{.ProductName}}</td>
                 <td>{{.Quantity}}</td>
             </tr>
             {{end}}

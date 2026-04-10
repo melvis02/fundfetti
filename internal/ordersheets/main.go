@@ -16,7 +16,7 @@ type ColumnMap struct {
 	IsOrderColumn bool
 }
 
-type OrderedPlant struct {
+type OrderItem struct {
 	ProductName string
 	Quantity    int
 	ProductID   *int64
@@ -29,7 +29,7 @@ type Order struct {
 	LastName      string
 	Email         string
 	PhoneNumber   string
-	OrderedPlants []OrderedPlant
+	Items         []OrderItem
 }
 
 func ReadFile(file []byte, filename string) [][]string {
@@ -87,7 +87,7 @@ func FormatOrderSheet(records [][]string) []Order {
 			LastName:      strings.Split(record[columnsMap["Name"].ColumnIndex], " ")[1],
 			Email:         record[columnsMap["Email Address"].ColumnIndex],
 			PhoneNumber:   record[columnsMap["Phone Number"].ColumnIndex],
-			OrderedPlants: []OrderedPlant{},
+			Items:         []OrderItem{},
 		}
 
 		for i, value := range record {
@@ -101,7 +101,7 @@ func FormatOrderSheet(records [][]string) []Order {
 			if quantity <= 0 {
 				continue
 			}
-			order.OrderedPlants = append(order.OrderedPlants, OrderedPlant{
+			order.Items = append(order.Items, OrderItem{
 				ProductName: headers[i],
 				Quantity:    quantity,
 			})

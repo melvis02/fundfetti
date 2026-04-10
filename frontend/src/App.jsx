@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminProvider } from './context/AdminContext';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import AdminLayout from './layouts/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -20,50 +21,52 @@ import About from './pages/About';
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/c/:id" element={<PublicCampaign />} />
-          <Route path="/c/:orgSlug/:campaignSlug" element={<PublicCampaign />} />
-          <Route path="/login" element={<Login />} />
+      <ThemeProvider>
+        <AuthProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/c/:id" element={<PublicCampaign />} />
+            <Route path="/c/:orgSlug/:campaignSlug" element={<PublicCampaign />} />
+            <Route path="/login" element={<Login />} />
 
-          {/* Print Routes (Standalone - protected?) - Maybe keep public for ease of printing, or protect? Let's protect them for now as they contain data */}
-          <Route path="/print/summary" element={
-            <ProtectedRoute>
-              <PrintSummary />
-            </ProtectedRoute>
-          } />
-          <Route path="/print/orders" element={
-            <ProtectedRoute>
-              <PrintSheets />
-            </ProtectedRoute>
-          } />
-          <Route path="/print/supplier-order" element={
-            <ProtectedRoute>
-              <PrintSupplierOrder />
-            </ProtectedRoute>
-          } />
+            {/* Print Routes (Standalone - protected?) - Maybe keep public for ease of printing, or protect? Let's protect them for now as they contain data */}
+            <Route path="/print/summary" element={
+              <ProtectedRoute>
+                <PrintSummary />
+              </ProtectedRoute>
+            } />
+            <Route path="/print/orders" element={
+              <ProtectedRoute>
+                <PrintSheets />
+              </ProtectedRoute>
+            } />
+            <Route path="/print/supplier-order" element={
+              <ProtectedRoute>
+                <PrintSupplierOrder />
+              </ProtectedRoute>
+            } />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={
-            <ProtectedRoute>
-              <AdminProvider>
-                <AdminLayout />
-              </AdminProvider>
-            </ProtectedRoute>
-          }>
+            {/* Admin Routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <AdminProvider>
+                  <AdminLayout />
+                </AdminProvider>
+              </ProtectedRoute>
+            }>
 
-            <Route path="organizations" element={<Organizations />} />
-            <Route path="organizations/:id" element={<OrganizationDashboard />} />
-            <Route path="organizations/:id/campaigns/:campaignId" element={<CampaignDashboard />} />
-            <Route path="users" element={<Users />} />
-          </Route>
+              <Route path="organizations" element={<Organizations />} />
+              <Route path="organizations/:id" element={<OrganizationDashboard />} />
+              <Route path="organizations/:id/campaigns/:campaignId" element={<CampaignDashboard />} />
+              <Route path="users" element={<Users />} />
+            </Route>
 
-          {/* Public Home */}
-          <Route path="/" element={<PublicHome />} />
-          <Route path="/about" element={<About />} />
-        </Routes>
-      </AuthProvider>
+            {/* Public Home */}
+            <Route path="/" element={<PublicHome />} />
+            <Route path="/about" element={<About />} />
+          </Routes>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

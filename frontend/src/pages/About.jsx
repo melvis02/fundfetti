@@ -4,7 +4,7 @@ import SiteHeader from '../components/SiteHeader';
 
 export default function About() {
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-200">
             <SiteHeader />
             <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white">
                 <div className="container mx-auto px-6 py-12 text-center">
@@ -15,16 +15,16 @@ export default function About() {
             </div>
 
             <div className="container mx-auto px-6 py-12 flex-grow max-w-3xl">
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-                    <h2 className="text-2xl font-bold text-slate-900 mb-4">What is Fundfetti?</h2>
-                    <p className="text-slate-600 mb-6 leading-relaxed">
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 transition-colors">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">What is Fundfetti?</h2>
+                    <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
                         Fundfetti is an open-source platform designed to help local schools, clubs, and organizations 
                         manage their fundraisers online. It provides a simple, beautiful, and easy-to-use interface 
                         for supporters to purchase items and for organizers to track their progress.
                     </p>
 
-                    <h2 className="text-2xl font-bold text-slate-900 mb-4">Open Source</h2>
-                    <p className="text-slate-600 mb-6 leading-relaxed">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Open Source</h2>
+                    <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
                         Fundfetti is proudly open-source. You can view the code, report issues, or contribute 
                         to the project on GitHub.
                     </p>
@@ -41,7 +41,7 @@ export default function About() {
                         View on GitHub
                     </a>
                     
-                    <div className="mt-8 pt-6 border-t border-slate-100 flex justify-center">
+                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-center">
                         <Link to="/" className="text-teal-600 font-semibold hover:text-teal-700 transition-colors">
                             &larr; Back to Home
                         </Link>

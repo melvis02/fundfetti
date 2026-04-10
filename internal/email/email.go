@@ -25,8 +25,8 @@ func SendOrderConfirmation(order ordersheets.Order, campaign db.Campaign, org *d
 
 	var itemsList strings.Builder
 	var total float64
-	for _, item := range order.OrderedPlants {
-		// We need product price, but order item currently only has PlantType and Quantity.
+	for _, item := range order.Items {
+		// We need product price, but order item currently only has ProductName and Quantity.
 		// Detailed price calculation should ideally be passed in or looked up.
 		// For now, let's just list items.
 		itemsList.WriteString(fmt.Sprintf("<li>%s x %d</li>", item.ProductName, item.Quantity))

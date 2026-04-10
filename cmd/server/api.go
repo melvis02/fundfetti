@@ -45,7 +45,7 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		Name       string                     `json:"name"`
 		Email      string                     `json:"email"`
 		Phone      string                     `json:"phone"`
-		Items      []ordersheets.OrderedPlant `json:"items"`
+		Items      []ordersheets.OrderItem `json:"items"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -73,7 +73,7 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		Name:          req.Name,
 		Email:         req.Email,
 		PhoneNumber:   req.Phone,
-		OrderedPlants: req.Items,
+		Items:         req.Items,
 	}
 
 	if err := db.InsertOrder(order); err != nil {

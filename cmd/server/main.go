@@ -279,8 +279,8 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if orgID != 0 {
 		productNames := make(map[string]bool)
 		for _, order := range orders {
-			for _, plant := range order.OrderedPlants {
-				productNames[plant.ProductName] = true
+			for _, item := range order.Items {
+				productNames[item.ProductName] = true
 			}
 		}
 

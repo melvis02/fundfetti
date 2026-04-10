@@ -213,11 +213,6 @@ func InitDB(driverName, dataSourceName string) error {
 		}())
 	}
 
-	// Rename column plant_type to product_name
-	ignoreErr(func() error {
-		_, err := DB.Exec("ALTER TABLE order_items RENAME COLUMN plant_type TO product_name")
-		return err
-	}())
 
 	// Products: wholesale_price_cents
 	ignoreErr(addColumn(driverName, "products", "wholesale_price_cents", "INTEGER DEFAULT 0"))
@@ -305,7 +300,7 @@ func InsertOrder(order ordersheets.Order) error {
 	}
 	defer stmt.Close()
 
-	for _, item := range order.OrderedPlants {
+	for _, item := range order.Items {
 		if _, err := stmt.Exec(orderID, item.ProductName, item.Quantity, item.ProductID); err != nil {
 			return fmt.Errorf("failed to insert order item: %w", err)
 		}
@@ -371,7 +366,7 @@ func UpsertOrder(order ordersheets.Order) error {
 	}
 	defer stmt.Close()
 
-	for _, item := range order.OrderedPlants {
+	for _, item := range order.Items {
 		if _, err := stmt.Exec(orderID, item.ProductName, item.Quantity, item.ProductID); err != nil {
 			return fmt.Errorf("failed to insert order item: %w", err)
 		}

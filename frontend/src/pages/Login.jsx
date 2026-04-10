@@ -24,10 +24,10 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
             <div className="max-w-md w-full space-y-8">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 dark:text-white">
                         Sign in to Admin Console
                     </h2>
                 </div>
@@ -42,7 +42,7 @@ export default function Login() {
                                 type="email"
                                 autoComplete="email"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-white bg-white dark:bg-slate-800 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
                                 placeholder="Email address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -56,7 +56,7 @@ export default function Login() {
                                 type="password"
                                 autoComplete="current-password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-white bg-white dark:bg-slate-800 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -82,10 +82,10 @@ export default function Login() {
                     <div className="mt-4">
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-slate-300"></div>
+                                <div className="w-full border-t border-slate-300 dark:border-slate-700"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-slate-50 text-slate-500">
+                                <span className="px-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
                                     Or
                                 </span>
                             </div>
@@ -94,7 +94,7 @@ export default function Login() {
                         <div className="mt-4">
                             <a
                                 href="/api/auth/google"
-                                className="w-full flex justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                className="w-full flex justify-center py-2 px-4 border border-slate-300 dark:border-slate-700 rounded-md shadow-sm bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                             >
                                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
