@@ -122,6 +122,14 @@ func StartServer() {
 	// 2. Serve public assets (legacy or shared)
 	router.PathPrefix("/public/").Handler(http.StripPrefix("/public/", http.FileServer(http.Dir("public"))))
 
+	// Serve favicon specifically to prevent it from serving index.html
+	router.HandleFunc("/favicon.png", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "frontend/dist/favicon.png")
+	})
+	router.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "frontend/dist/favicon.png")
+	})
+
 	// 3. Catch-all: Serve index.html for React Router
 	router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
