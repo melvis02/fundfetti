@@ -29,6 +29,7 @@ type Order struct {
 	LastName      string
 	Email         string
 	PhoneNumber   string
+	StudentName   string
 	Items         []OrderItem
 }
 
@@ -62,6 +63,11 @@ func FormatOrderSheet(records [][]string) []Order {
 	headers[findClosestMatchingColumnIndex("Name", headers)] = "Name"
 	headers[findClosestMatchingColumnIndex("Email Address", headers)] = "Email Address"
 	headers[findClosestMatchingColumnIndex("Phone Number", headers)] = "Phone Number"
+	
+	studentNameIdx := findClosestMatchingColumnIndex("Student Name", headers)
+	if studentNameIdx != 0 || headers[0] == "Student Name" {
+		headers[studentNameIdx] = "Student Name"
+	}
 
 	columnsMap := make(map[string]ColumnMap)
 	for i, header := range headers {
@@ -87,7 +93,12 @@ func FormatOrderSheet(records [][]string) []Order {
 			LastName:      strings.Split(record[columnsMap["Name"].ColumnIndex], " ")[1],
 			Email:         record[columnsMap["Email Address"].ColumnIndex],
 			PhoneNumber:   record[columnsMap["Phone Number"].ColumnIndex],
+			StudentName:   "",
 			Items:         []OrderItem{},
+		}
+		
+		if col, ok := columnsMap["Student Name"]; ok {
+			order.StudentName = record[col.ColumnIndex]
 		}
 
 		for i, value := range record {

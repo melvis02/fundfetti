@@ -64,6 +64,7 @@ func InitDB(driverName, dataSourceName string) error {
 		picked_up BOOLEAN DEFAULT FALSE,
 		paid BOOLEAN DEFAULT FALSE,
 		campaign_id INTEGER,
+		student_name TEXT,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`, primaryKeyDef)
 
@@ -220,6 +221,9 @@ func InitDB(driverName, dataSourceName string) error {
 	// Orders: campaign_id
 	ignoreErr(addColumn(driverName, "orders", "campaign_id", "INTEGER"))
 
+	// Orders: student_name
+	ignoreErr(addColumn(driverName, "orders", "student_name", "TEXT"))
+
 	// Order Items: product_id
 	ignoreErr(addColumn(driverName, "order_items", "product_id", "INTEGER"))
 
@@ -276,15 +280,15 @@ func InsertOrder(order ordersheets.Order) error {
 	defer tx.Rollback()
 
 	var orderID int64
-	insertQuery := "INSERT INTO orders (name, email, phone, campaign_id) VALUES (?, ?, ?, ?)"
+	insertQuery := "INSERT INTO orders (name, email, phone, campaign_id, student_name) VALUES (?, ?, ?, ?, ?)"
 	
 	if currentDriver == "postgres" {
-		err := tx.QueryRow(Rebind(insertQuery+" RETURNING id"), order.Name, order.Email, order.PhoneNumber, order.CampaignID).Scan(&orderID)
+		err := tx.QueryRow(Rebind(insertQuery+" RETURNING id"), order.Name, order.Email, order.PhoneNumber, order.CampaignID, order.StudentName).Scan(&orderID)
 		if err != nil {
 			return fmt.Errorf("failed to insert order: %w", err)
 		}
 	} else {
-		res, err := tx.Exec(insertQuery, order.Name, order.Email, order.PhoneNumber, order.CampaignID)
+		res, err := tx.Exec(insertQuery, order.Name, order.Email, order.PhoneNumber, order.CampaignID, order.StudentName)
 		if err != nil {
 			return fmt.Errorf("failed to insert order: %w", err)
 		}
@@ -327,14 +331,14 @@ func UpsertOrder(order ordersheets.Order) error {
 
 	if err == sql.ErrNoRows {
 		// New order
-		insertQuery := "INSERT INTO orders (name, email, phone, campaign_id) VALUES (?, ?, ?, ?)"
+		insertQuery := "INSERT INTO orders (name, email, phone, campaign_id, student_name) VALUES (?, ?, ?, ?, ?)"
 		if currentDriver == "postgres" {
-			err := tx.QueryRow(Rebind(insertQuery+" RETURNING id"), order.Name, order.Email, order.PhoneNumber, order.CampaignID).Scan(&orderID)
+			err := tx.QueryRow(Rebind(insertQuery+" RETURNING id"), order.Name, order.Email, order.PhoneNumber, order.CampaignID, order.StudentName).Scan(&orderID)
 			if err != nil {
 				return fmt.Errorf("failed to insert order: %w", err)
 			}
 		} else {
-			res, err := tx.Exec(insertQuery, order.Name, order.Email, order.PhoneNumber, order.CampaignID)
+			res, err := tx.Exec(insertQuery, order.Name, order.Email, order.PhoneNumber, order.CampaignID, order.StudentName)
 			if err != nil {
 				return fmt.Errorf("failed to insert order: %w", err)
 			}
@@ -347,7 +351,7 @@ func UpsertOrder(order ordersheets.Order) error {
 		// Existing order - update phone if needed, but DO NOT overwrite picked_up/paid
 		// Also update campaign_id if it's set on the incoming order (assuming we want to link it if it wasn't linked or update it)
 		// For now, let's just update phone and campaign_id
-		_, err = tx.Exec(Rebind("UPDATE orders SET phone = ?, campaign_id = COALESCE(?, campaign_id) WHERE id = ?"), order.PhoneNumber, order.CampaignID, orderID)
+		_, err = tx.Exec(Rebind("UPDATE orders SET phone = ?, campaign_id = COALESCE(?, campaign_id), student_name = CASE WHEN ? != '' THEN ? ELSE student_name END WHERE id = ?"), order.PhoneNumber, order.CampaignID, order.StudentName, order.StudentName, orderID)
 		if err != nil {
 			return fmt.Errorf("failed to update order: %w", err)
 		}
@@ -378,13 +382,14 @@ func UpsertOrder(order ordersheets.Order) error {
 type DBOrder struct {
 	ID         int64
 	CampaignID *int64 // Nullable
-	Name       string
-	Email      string
-	Phone      string
-	PickedUp   bool
-	Paid       bool
-	CreatedAt  time.Time
-	Items      []DBOrderItem
+	Name        string
+	Email       string
+	Phone       string
+	StudentName *string // Nullable
+	PickedUp    bool
+	Paid        bool
+	CreatedAt   time.Time
+	Items       []DBOrderItem
 }
 
 type DBOrderItem struct {
@@ -462,7 +467,7 @@ type Campaign struct {
 }
 
 func GetOrders() ([]DBOrder, error) {
-	rows, err := DB.Query("SELECT id, name, email, phone, picked_up, paid, created_at FROM orders ORDER BY name ASC")
+	rows, err := DB.Query("SELECT id, name, email, phone, picked_up, paid, created_at, student_name FROM orders ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -471,7 +476,7 @@ func GetOrders() ([]DBOrder, error) {
 	var orders []DBOrder
 	for rows.Next() {
 		var o DBOrder
-		if err := rows.Scan(&o.ID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt, &o.StudentName); err != nil {
 			log.Printf("Error scanning order: %v", err)
 			continue
 		}
@@ -504,7 +509,7 @@ func GetOrders() ([]DBOrder, error) {
 
 func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 	query := `
-		SELECT o.id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+		SELECT o.id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at, o.student_name 
 		FROM orders o
 		JOIN campaigns c ON o.campaign_id = c.id
 		WHERE c.organization_id = ?
@@ -519,7 +524,7 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 	var orders []DBOrder
 	for rows.Next() {
 		var o DBOrder
-		if err := rows.Scan(&o.ID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt, &o.StudentName); err != nil {
 			log.Printf("Error scanning order: %v", err)
 			continue
 		}
@@ -548,7 +553,7 @@ func GetOrganizationOrders(orgID int64) ([]DBOrder, error) {
 
 func GetCampaignOrders(campaignID int64) ([]DBOrder, error) {
 	query := `
-		SELECT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+		SELECT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at, o.student_name 
 		FROM orders o
 		WHERE o.campaign_id = ?
 		ORDER BY o.name ASC
@@ -562,7 +567,7 @@ func GetCampaignOrders(campaignID int64) ([]DBOrder, error) {
 	var orders []DBOrder
 	for rows.Next() {
 		var o DBOrder
-		if err := rows.Scan(&o.ID, &o.CampaignID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.CampaignID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt, &o.StudentName); err != nil {
 			log.Printf("Error scanning order: %v", err)
 			continue
 		}
@@ -593,7 +598,7 @@ func GetUnassignedOrders(orgID int64) ([]DBOrder, error) {
 	// Orders without a campaign are implicitly unassigned. We can determine their true organization
 	// by checking the products referenced in their order items.
 	query := `
-		SELECT DISTINCT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+		SELECT DISTINCT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at, o.student_name 
 		FROM orders o
 		JOIN order_items oi ON o.id = oi.order_id
 		JOIN products p ON oi.product_id = p.id
@@ -603,7 +608,7 @@ func GetUnassignedOrders(orgID int64) ([]DBOrder, error) {
 	// If orgID is 0 (global admin), we might want all unassigned orders
 	if orgID == 0 {
 		query = `
-			SELECT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at 
+			SELECT o.id, o.campaign_id, o.name, o.email, o.phone, o.picked_up, o.paid, o.created_at, o.student_name 
 			FROM orders o
 			WHERE o.campaign_id IS NULL
 			ORDER BY o.name ASC
@@ -626,7 +631,7 @@ func GetUnassignedOrders(orgID int64) ([]DBOrder, error) {
 	var orders []DBOrder
 	for rows.Next() {
 		var o DBOrder
-		if err := rows.Scan(&o.ID, &o.CampaignID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.CampaignID, &o.Name, &o.Email, &o.Phone, &o.PickedUp, &o.Paid, &o.CreatedAt, &o.StudentName); err != nil {
 			log.Printf("Error scanning order: %v", err)
 			continue
 		}

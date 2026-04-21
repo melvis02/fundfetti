@@ -45,6 +45,7 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		Name       string                     `json:"name"`
 		Email      string                     `json:"email"`
 		Phone      string                     `json:"phone"`
+		StudentName string                     `json:"student_name"`
 		Items      []ordersheets.OrderItem `json:"items"`
 	}
 
@@ -73,6 +74,7 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		Name:          req.Name,
 		Email:         req.Email,
 		PhoneNumber:   req.Phone,
+		StudentName:   req.StudentName,
 		Items:         req.Items,
 	}
 

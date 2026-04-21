@@ -535,6 +535,7 @@ export default function OrganizationDashboard() {
                                                         <div className="font-medium text-slate-900 dark:text-white">{order.Name}</div>
                                                         <div className="text-slate-500 dark:text-slate-400 text-xs">{order.Email}</div>
                                                         {order.Phone && <div className="text-slate-500 dark:text-slate-400 text-xs">{order.Phone}</div>}
+                                                        {order.StudentName && <div className="text-slate-500 dark:text-slate-400 text-xs mt-1 bg-slate-100 dark:bg-slate-700/50 inline-block px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">Student: {order.StudentName}</div>}
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
                                                         {order.Items && order.Items.length > 0 ? (

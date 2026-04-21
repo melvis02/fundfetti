@@ -22,7 +22,7 @@ export default function PublicCampaign() {
 
     // Order State
     const [cart, setCart] = useState({}); // { productId: quantity }
-    const [customer, setCustomer] = useState({ name: '', email: '', phone: '' });
+    const [customer, setCustomer] = useState({ name: '', email: '', phone: '', student_name: '' });
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -209,6 +209,10 @@ export default function PublicCampaign() {
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                                 <input type="tel" required placeholder="(555) 123-4567" className="form-input w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:border-teal-500 focus:ring-teal-500 transition-colors" value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })} />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Student Name (Optional)</label>
+                                <input type="text" placeholder="Tommy Doe" className="form-input w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:border-teal-500 focus:ring-teal-500 transition-colors" value={customer.student_name} onChange={e => setCustomer({ ...customer, student_name: e.target.value })} />
+                            </div>
                         </div>
                         <div className="mt-8 flex justify-between border-t border-slate-100 dark:border-slate-700 pt-6">
                             <button onClick={() => setStep(1)} className="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-800 dark:hover:text-white transition-colors">← Back</button>
@@ -231,6 +235,7 @@ export default function PublicCampaign() {
                             <div className="flex justify-between"><span className="font-medium text-slate-900 dark:text-white">Name:</span> {customer.name}</div>
                             <div className="flex justify-between"><span className="font-medium text-slate-900 dark:text-white">Email:</span> {customer.email}</div>
                             <div className="flex justify-between"><span className="font-medium text-slate-900 dark:text-white">Phone:</span> {customer.phone}</div>
+                            {customer.student_name && <div className="flex justify-between"><span className="font-medium text-slate-900 dark:text-white">Student Name:</span> {customer.student_name}</div>}
                         </div>
 
                         <div className="space-y-3 mb-6">
