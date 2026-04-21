@@ -18,6 +18,7 @@ export default function CampaignDashboard() {
 
     const [orderFilter, setOrderFilter] = useState('all'); // all, pending_pickup, unpaid
     const [searchQuery, setSearchQuery] = useState('');
+    const [showQR, setShowQR] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -100,6 +101,11 @@ export default function CampaignDashboard() {
 
     if (loading) return <div className="p-8 text-center text-slate-500">Loading Campaign...</div>;
     if (error || !campaign) return <div className="p-8 text-center text-red-500">Error: {error || 'Campaign not found'}</div>;
+
+    const campaignUrl = campaign?.slug && org?.slug 
+        ? `${window.location.origin}/c/${org.slug}/${campaign.slug}`
+        : `${window.location.origin}/c/${campaign?.id}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=10&data=${encodeURIComponent(campaignUrl)}`;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-800 dark:text-slate-100 transition-colors duration-200">
@@ -189,9 +195,15 @@ export default function CampaignDashboard() {
                                     <span>📋</span> Print Supplier Order
                                 </a>
                             </div>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                                 Opens a printer-friendly view in a new tab. Scoped exclusively to {campaign.name}.
                             </p>
+                            <button
+                                onClick={() => setShowQR(true)}
+                                className="w-full mt-1 flex items-center justify-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg transition-colors font-medium border border-indigo-200 dark:border-indigo-700/50 text-sm"
+                            >
+                                <span>📱</span> Share via QR Code
+                            </button>
                         </div>
                     </div>
 
@@ -277,6 +289,69 @@ export default function CampaignDashboard() {
                     </div>
                 </div>
             </div>
+            
+            {showQR && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity p-4" onClick={() => setShowQR(false)}>
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl overflow-hidden max-w-sm w-full transition-transform transform scale-100 border border-slate-200 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                            <h3 className="font-semibold text-slate-800 dark:text-white">Share Fundraiser</h3>
+                            <button onClick={() => setShowQR(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        <div className="p-6 flex flex-col items-center">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-inner mb-5 inline-block">
+                                <img src={qrCodeUrl} alt="Campaign QR Code" className="w-48 h-48 mix-blend-multiply" crossOrigin="anonymous" />
+                            </div>
+                            
+                            <div className="w-full mb-6">
+                                <p className="text-xs text-center font-medium text-slate-500 dark:text-slate-400 mb-1">Public Link</p>
+                                <div className="flex focus-within:ring-2 focus-within:ring-primary-500 rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden bg-slate-50 dark:bg-slate-900 transition-shadow">
+                                    <input type="text" readOnly value={campaignUrl} className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-slate-600 dark:text-slate-300 px-3 py-2 w-full outline-none" onClick={(e) => e.target.select()} />
+                                    <button 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(campaignUrl);
+                                            // Quick visual feedback could be added here
+                                        }}
+                                        className="px-3 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors border-l border-slate-300 dark:border-slate-600 cursor-pointer"
+                                        title="Copy to clipboard"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <a 
+                                href={qrCodeUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    fetch(qrCodeUrl)
+                                        .then(res => res.blob())
+                                        .then(blob => {
+                                            const url = window.URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.style.display = 'none';
+                                            a.href = url;
+                                            a.download = `${campaign?.name?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'campaign'}_qr.png`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            window.URL.revokeObjectURL(url);
+                                        })
+                                        .catch(() => {
+                                            window.open(qrCodeUrl, '_blank');
+                                        });
+                                }}
+                                className="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 focus:ring-2 focus:ring-offset-1 focus:ring-primary-500"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                Download Image
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
